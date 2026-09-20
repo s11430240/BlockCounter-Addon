@@ -360,6 +360,19 @@ function resolveNonFullBlockAlias(typeId) {
     return result;
 }
 
+/**
+ * 取得全息實體使用的完整方塊材質 ID；不修改投影資料中的原始方塊 ID。
+ */
+function getBlockGeometryWithFallback(blockId) {
+    if (!blockId) return "minecraft:stone";
+    if (BLOCK_TEXTURE_INDEX_MAP.has(blockId)) return blockId;
+
+    const fallbackId = resolveNonFullBlockAlias(blockId);
+    if (fallbackId && BLOCK_TEXTURE_INDEX_MAP.has(fallbackId)) return fallbackId;
+
+    return "minecraft:stone";
+}
+
 // ==========================================
 // 1-2. 方塊旋轉 (角度) 輔助工具
 //      負責讓方塊自身的朝向 (門、樓梯、原木等) 隨著
@@ -644,7 +657,8 @@ function refreshHologramEntities(player, preview) {
             // 依實際方塊 typeId 設定材質索引 entity property，
             // render controller 會依此索引切換成對應的貼圖陣列成員，
             // 使全息投影的材質與被複製/選取的方塊材質一致。
-            const texIndex = getTextureIndexForBlock(b.typeId);
+            const geometryId = getBlockGeometryWithFallback(b.typeId);
+            const texIndex = getTextureIndexForBlock(geometryId);
             try {
                 holo.setProperty("custom:tex_index", texIndex);
             } catch (e) {}
