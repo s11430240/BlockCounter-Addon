@@ -1,0 +1,11 @@
+{
+  "name": "block-counter-addon",
+  "version": "1.0.0",
+  "description": "BlockCounter Minecraft Bedrock Addon",
+  "scripts": {
+    "build": "bestzip BlockCounter.mcaddon BlockCounter_BP/ BlockCounter_RP/"
+  },
+  "devDependencies": {
+    "bestzip": "^2.2.1"
+  }
+}
