@@ -1,0 +1,15 @@
+{
+  "resource_pack_name": "pack.name",
+  "texture_name": "atlas.items",
+  "texture_data": {
+    "block_counter_icon": {
+      "textures": "textures/items/block_counter_icon"
+    },
+    "block_counter_selector_icon": {
+      "textures": "textures/items/block_counter_selector_icon"
+    },
+    "block_counter_checker_icon": {
+      "textures": "textures/items/block_counter_checker_icon"
+    }
+  }
+}

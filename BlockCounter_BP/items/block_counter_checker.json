@@ -1,0 +1,18 @@
+{
+  "format_version": "1.20.50",
+  "minecraft:item": {
+    "description": {
+      "identifier": "custom:block_counter_checker",
+      "menu_category": {
+        "category": "items"
+      }
+    },
+    "components": {
+      "minecraft:icon": "block_counter_checker_icon",
+      "minecraft:display_name": {
+        "value": "§q界伏盒缺料比對器 §7(右鍵界伏盒)"
+      },
+      "minecraft:max_stack_size": 1
+    }
+  }
+}

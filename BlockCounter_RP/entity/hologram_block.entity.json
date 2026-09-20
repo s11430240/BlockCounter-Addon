@@ -1,0 +1,20 @@
+{
+  "format_version": "1.10.0",
+  "minecraft:client_entity": {
+    "description": {
+      "identifier": "custom:hologram_block",
+      "materials": {
+        "default": "entity_alphablend"
+      },
+      "textures": {
+        "default": "textures/blocks/dirt"
+      },
+      "geometry": {
+        "default": "geometry.hologram_cube"
+      },
+      "render_controllers": [
+        "controller.render.hologram_block"
+      ]
+    }
+  }
+}

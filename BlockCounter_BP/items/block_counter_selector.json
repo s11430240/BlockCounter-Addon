@@ -1,0 +1,18 @@
+{
+  "format_version": "1.20.50",
+  "minecraft:item": {
+    "description": {
+      "identifier": "custom:block_counter_selector",
+      "menu_category": {
+        "category": "items"
+      }
+    },
+    "components": {
+      "minecraft:icon": "block_counter_selector_icon",
+      "minecraft:display_name": {
+        "value": "§a區域選擇器 §7(蹲下+右鍵方塊)"
+      },
+      "minecraft:max_stack_size": 1
+    }
+  }
+}
