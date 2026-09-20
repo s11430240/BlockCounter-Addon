@@ -3,14 +3,16 @@ import {
     system, 
     ItemStack, 
     BlockComponentTypes, 
-    BlockPermutation 
+    BlockPermutation,
+    Direction,
+    GameMode
 } from "@minecraft/server";
 import { 
     ModalFormData, 
     ActionFormData 
 } from "@minecraft/server-ui";
 
-world.sendMessage("§e[系統提示] BlockCounter (材質修復版) 已成功載入！");
+world.sendMessage("§e[系統提示] BlockCounter v1.0.4 已成功載入！(若你沒看到這行版本號更新，代表遊戲還在用舊快取，請完全關閉遊戲重開)");
 
 // ==========================================
 // 1. 全域變數與數據儲存
@@ -37,6 +39,413 @@ const DEFAULT_FILTER_LIST = [
     "minecraft:water",
     "minecraft:lava"
 ];
+
+// ==========================================
+// 1-1. 方塊材質對照表 (index 必須與 RP 的
+//      render_controllers / entity 貼圖陣列順序完全一致，
+//      index 0 為找不到對應材質時的預留 "未知材質" 貼圖)
+// ==========================================
+
+const BLOCK_TEXTURE_TABLE = [
+    [1, ["minecraft:stone"]],
+    [2, ["minecraft:granite"]],
+    [3, ["minecraft:polished_granite"]],
+    [4, ["minecraft:diorite"]],
+    [5, ["minecraft:polished_diorite"]],
+    [6, ["minecraft:andesite"]],
+    [7, ["minecraft:polished_andesite"]],
+    [8, ["minecraft:dirt", "minecraft:coarse_dirt"]],
+    [9, ["minecraft:grass_block"]],
+    [10, ["minecraft:cobblestone"]],
+    [11, ["minecraft:mossy_cobblestone"]],
+    [12, ["minecraft:oak_planks"]],
+    [13, ["minecraft:spruce_planks"]],
+    [14, ["minecraft:birch_planks"]],
+    [15, ["minecraft:jungle_planks"]],
+    [16, ["minecraft:acacia_planks"]],
+    [17, ["minecraft:dark_oak_planks"]],
+    [18, ["minecraft:oak_log", "minecraft:stripped_oak_log"]],
+    [19, ["minecraft:spruce_log", "minecraft:stripped_spruce_log"]],
+    [20, ["minecraft:birch_log", "minecraft:stripped_birch_log"]],
+    [21, ["minecraft:jungle_log", "minecraft:stripped_jungle_log"]],
+    [22, ["minecraft:oak_leaves"]],
+    [23, ["minecraft:spruce_leaves"]],
+    [24, ["minecraft:bedrock"]],
+    [25, ["minecraft:sand"]],
+    [26, ["minecraft:red_sand"]],
+    [27, ["minecraft:gravel"]],
+    [28, ["minecraft:gold_ore"]],
+    [29, ["minecraft:iron_ore"]],
+    [30, ["minecraft:coal_ore"]],
+    [31, ["minecraft:diamond_ore"]],
+    [32, ["minecraft:emerald_ore"]],
+    [33, ["minecraft:redstone_ore"]],
+    [34, ["minecraft:lapis_ore"]],
+    [35, ["minecraft:lapis_block"]],
+    [36, ["minecraft:glass"]],
+    [37, ["minecraft:white_wool"]],
+    [38, ["minecraft:orange_wool"]],
+    [39, ["minecraft:magenta_wool"]],
+    [40, ["minecraft:light_blue_wool"]],
+    [41, ["minecraft:yellow_wool"]],
+    [42, ["minecraft:lime_wool"]],
+    [43, ["minecraft:pink_wool"]],
+    [44, ["minecraft:gray_wool"]],
+    [45, ["minecraft:light_gray_wool"]],
+    [46, ["minecraft:cyan_wool"]],
+    [47, ["minecraft:purple_wool"]],
+    [48, ["minecraft:blue_wool"]],
+    [49, ["minecraft:brown_wool"]],
+    [50, ["minecraft:green_wool"]],
+    [51, ["minecraft:red_wool"]],
+    [52, ["minecraft:black_wool"]],
+    [53, ["minecraft:gold_block"]],
+    [54, ["minecraft:iron_block"]],
+    [55, ["minecraft:diamond_block"]],
+    [56, ["minecraft:emerald_block"]],
+    [57, ["minecraft:bricks"]],
+    [58, ["minecraft:bookshelf"]],
+    [59, ["minecraft:obsidian"]],
+    [60, ["minecraft:furnace"]],
+    [61, ["minecraft:crafting_table"]],
+    [62, ["minecraft:ice"]],
+    [63, ["minecraft:packed_ice"]],
+    [64, ["minecraft:snow", "minecraft:snow_block"]],
+    [65, ["minecraft:clay"]],
+    [66, ["minecraft:netherrack"]],
+    [67, ["minecraft:soul_sand"]],
+    [68, ["minecraft:glowstone"]],
+    [69, ["minecraft:nether_bricks"]],
+    [70, ["minecraft:end_stone"]],
+    [71, ["minecraft:quartz_block"]],
+    [72, ["minecraft:sea_lantern"]],
+    [73, ["minecraft:purpur_block"]],
+    [74, ["minecraft:magma_block"]],
+    [75, ["minecraft:hay_block"]],
+    [76, ["minecraft:melon_block"]],
+    [77, ["minecraft:pumpkin", "minecraft:carved_pumpkin"]],
+    [78, ["minecraft:mycelium"]],
+    [79, ["minecraft:podzol"]],
+    [80, ["minecraft:stone_bricks"]],
+    [81, ["minecraft:mossy_stone_bricks"]],
+    [82, ["minecraft:cracked_stone_bricks"]],
+    [83, ["minecraft:chiseled_stone_bricks"]],
+    [84, ["minecraft:white_concrete"]],
+    [85, ["minecraft:orange_concrete"]],
+    [86, ["minecraft:gray_concrete"]],
+    [87, ["minecraft:black_concrete"]],
+    [88, ["minecraft:red_concrete"]],
+    [89, ["minecraft:blue_concrete"]],
+    [90, ["minecraft:magenta_concrete"]],
+    [91, ["minecraft:light_blue_concrete"]],
+    [92, ["minecraft:yellow_concrete"]],
+    [93, ["minecraft:lime_concrete"]],
+    [94, ["minecraft:pink_concrete"]],
+    [95, ["minecraft:light_gray_concrete"]],
+    [96, ["minecraft:cyan_concrete"]],
+    [97, ["minecraft:purple_concrete"]],
+    [98, ["minecraft:brown_concrete"]],
+    [99, ["minecraft:green_concrete"]],
+    [100, ["minecraft:white_stained_glass"]],
+    [101, ["minecraft:orange_stained_glass"]],
+    [102, ["minecraft:magenta_stained_glass"]],
+    [103, ["minecraft:light_blue_stained_glass"]],
+    [104, ["minecraft:yellow_stained_glass"]],
+    [105, ["minecraft:lime_stained_glass"]],
+    [106, ["minecraft:pink_stained_glass"]],
+    [107, ["minecraft:gray_stained_glass"]],
+    [108, ["minecraft:light_gray_stained_glass"]],
+    [109, ["minecraft:cyan_stained_glass"]],
+    [110, ["minecraft:purple_stained_glass"]],
+    [111, ["minecraft:blue_stained_glass"]],
+    [112, ["minecraft:brown_stained_glass"]],
+    [113, ["minecraft:green_stained_glass"]],
+    [114, ["minecraft:red_stained_glass"]],
+    [115, ["minecraft:black_stained_glass"]],
+    [116, ["minecraft:white_terracotta"]],
+    [117, ["minecraft:orange_terracotta"]],
+    [118, ["minecraft:magenta_terracotta"]],
+    [119, ["minecraft:light_blue_terracotta"]],
+    [120, ["minecraft:yellow_terracotta"]],
+    [121, ["minecraft:lime_terracotta"]],
+    [122, ["minecraft:pink_terracotta"]],
+    [123, ["minecraft:gray_terracotta"]],
+    [124, ["minecraft:light_gray_terracotta"]],
+    [125, ["minecraft:cyan_terracotta"]],
+    [126, ["minecraft:purple_terracotta"]],
+    [127, ["minecraft:blue_terracotta"]],
+    [128, ["minecraft:brown_terracotta"]],
+    [129, ["minecraft:green_terracotta"]],
+    [130, ["minecraft:red_terracotta"]],
+    [131, ["minecraft:black_terracotta"]],
+    [132, ["minecraft:terracotta"]]
+];
+
+// 未知材質時使用 index 0 (RP 中的 hologram_unknown 棋盤格貼圖)
+const UNKNOWN_TEXTURE_INDEX = 0;
+
+const BLOCK_TEXTURE_INDEX_MAP = new Map();
+for (const [index, ids] of BLOCK_TEXTURE_TABLE) {
+    for (const id of ids) {
+        BLOCK_TEXTURE_INDEX_MAP.set(id, index);
+    }
+}
+
+/**
+ * 依方塊 typeId 找出對應的材質索引 (對應 RP 貼圖陣列)。
+ * 找不到對應材質時，回傳 UNKNOWN_TEXTURE_INDEX，而不是靜默顯示成泥土。
+ */
+function getTextureIndexForBlock(typeId) {
+    if (!typeId) return UNKNOWN_TEXTURE_INDEX;
+    if (BLOCK_TEXTURE_INDEX_MAP.has(typeId)) return BLOCK_TEXTURE_INDEX_MAP.get(typeId);
+
+    const aliasId = resolveNonFullBlockAlias(typeId);
+    if (aliasId && BLOCK_TEXTURE_INDEX_MAP.has(aliasId)) return BLOCK_TEXTURE_INDEX_MAP.get(aliasId);
+
+    return UNKNOWN_TEXTURE_INDEX;
+}
+
+// ==========================================
+// 1-2b. 明確指定的方塊備援字典 (BLOCK_FALLBACK_MAP)
+//      優先權最高：這裡列出的方塊一律直接用指定的完整方塊材質顯示，
+//      不需要再靠下面的自動後綴推算。之後要手動微調某個方塊的
+//      投影材質，就直接改這裡最快。
+// ==========================================
+const BLOCK_FALLBACK_MAP = {
+    // --- 木頭家具類 (不是靠後綴推算得出的特殊方塊) ---
+    "minecraft:bed": "minecraft:oak_planks",
+    "minecraft:flower_pot": "minecraft:oak_planks",
+    "minecraft:cauldron": "minecraft:iron_block",
+    "minecraft:lectern": "minecraft:oak_planks",
+    "minecraft:campfire": "minecraft:oak_log",
+    "minecraft:soul_campfire": "minecraft:oak_log",
+    "minecraft:cake": "minecraft:white_wool",
+    "minecraft:anvil": "minecraft:iron_block",
+    "minecraft:end_rod": "minecraft:quartz_block",
+    "minecraft:lantern": "minecraft:iron_block",
+    "minecraft:soul_lantern": "minecraft:iron_block",
+    "minecraft:chain": "minecraft:iron_block",
+    "minecraft:scaffolding": "minecraft:oak_planks",
+    "minecraft:ladder": "minecraft:oak_planks",
+    "minecraft:item_frame": "minecraft:oak_planks",
+    "minecraft:glow_item_frame": "minecraft:oak_planks",
+
+    // --- 範例中明確提到的方塊，直接寫死對照，確保 100% 正確 ---
+    "minecraft:spruce_stairs": "minecraft:spruce_planks",
+    "minecraft:spruce_slab": "minecraft:spruce_planks",
+    "minecraft:spruce_double_slab": "minecraft:spruce_planks",
+    "minecraft:spruce_door": "minecraft:spruce_planks",
+    "minecraft:spruce_trapdoor": "minecraft:spruce_planks",
+    "minecraft:spruce_fence": "minecraft:spruce_planks",
+    "minecraft:spruce_fence_gate": "minecraft:spruce_planks",
+    "minecraft:spruce_button": "minecraft:spruce_planks",
+    "minecraft:spruce_pressure_plate": "minecraft:spruce_planks",
+    "minecraft:wooden_button": "minecraft:oak_planks",
+    "minecraft:wooden_pressure_plate": "minecraft:oak_planks",
+    "minecraft:wooden_door": "minecraft:oak_planks",
+    "minecraft:iron_door": "minecraft:iron_block",
+    "minecraft:iron_trapdoor": "minecraft:iron_block",
+    "minecraft:stone_button": "minecraft:stone",
+    "minecraft:stone_pressure_plate": "minecraft:stone",
+    "minecraft:glass_pane": "minecraft:glass",
+
+    // --- 地毯 (顏色跟羊毛一樣，直接借用羊毛材質顯示) ---
+    "minecraft:white_carpet": "minecraft:white_wool",
+    "minecraft:orange_carpet": "minecraft:orange_wool",
+    "minecraft:magenta_carpet": "minecraft:magenta_wool",
+    "minecraft:light_blue_carpet": "minecraft:light_blue_wool",
+    "minecraft:yellow_carpet": "minecraft:yellow_wool",
+    "minecraft:lime_carpet": "minecraft:lime_wool",
+    "minecraft:pink_carpet": "minecraft:pink_wool",
+    "minecraft:gray_carpet": "minecraft:gray_wool",
+    "minecraft:light_gray_carpet": "minecraft:light_gray_wool",
+    "minecraft:cyan_carpet": "minecraft:cyan_wool",
+    "minecraft:purple_carpet": "minecraft:purple_wool",
+    "minecraft:blue_carpet": "minecraft:blue_wool",
+    "minecraft:brown_carpet": "minecraft:brown_wool",
+    "minecraft:green_carpet": "minecraft:green_wool",
+    "minecraft:red_carpet": "minecraft:red_wool",
+    "minecraft:black_carpet": "minecraft:black_wool"
+};
+
+// ==========================================
+// 1-3. 非完整方塊 (半磚/樓梯/按鈕/門/檔板/柵欄/牆/壓力板) 材質備援
+//      全息實體只有「同材質的完整方塊」貼圖，所以遇到這類方塊時，
+//      改用它「同材質的完整方塊」代替顯示，避免出現黑紫網格 (Missing Texture)。
+//      優先順序：BLOCK_FALLBACK_MAP (明確指定) > 後綴自動推算 > 未知材質棋盤格
+// ==========================================
+
+// 木頭類方塊，去掉結構後綴會得到樹種名稱，直接補上 "_planks"
+const WOOD_SPECIES = new Set([
+    "oak", "spruce", "birch", "jungle", "acacia", "dark_oak",
+    "crimson", "warped", "mangrove", "cherry", "bamboo"
+]);
+
+// 去掉結構後綴後名稱對不上完整方塊命名的特例，直接指定完整方塊 id
+const IRREGULAR_BASE_BLOCK = {
+    "stone": "minecraft:stone",
+    "cobblestone": "minecraft:cobblestone",
+    "mossy_cobblestone": "minecraft:mossy_cobblestone",
+    "stone_brick": "minecraft:stone_bricks",
+    "mossy_stone_brick": "minecraft:mossy_stone_bricks",
+    "brick": "minecraft:bricks",
+    "nether_brick": "minecraft:nether_bricks",
+    "quartz": "minecraft:quartz_block",
+    "purpur": "minecraft:purpur_block",
+    "granite": "minecraft:granite",
+    "diorite": "minecraft:diorite",
+    "andesite": "minecraft:andesite",
+    "polished_granite": "minecraft:polished_granite",
+    "polished_diorite": "minecraft:polished_diorite",
+    "polished_andesite": "minecraft:polished_andesite",
+    "iron": "minecraft:iron_block",
+    "gold": "minecraft:gold_block",
+    // 沒有樹種名稱的舊版通用木製按鈕/壓力板，一律用橡木代表
+    "wooden": "minecraft:oak_planks",
+    "wood": "minecraft:oak_planks"
+};
+
+// 依出現機率排序，較長/較特殊的後綴要放前面，避免被較短的後綴誤先比對到
+const NON_FULL_BLOCK_SUFFIXES = [
+    "_double_slab", "_slab",
+    "_stairs",
+    "_fence_gate", "_fence",
+    "_wall",
+    "_pressure_plate",
+    "_button",
+    "_trapdoor",
+    "_door",
+    "_pane",
+    "_carpet"
+];
+
+const NON_FULL_ALIAS_CACHE = new Map();
+
+/**
+ * 把半磚/樓梯/按鈕/門/柵欄/牆/壓力板等非完整方塊的 typeId，
+ * 轉換成「同材質完整方塊」的 typeId，讓全息投影能顯示接近的材質，
+ * 而不是直接顯示遺失材質網格。找不到合理對應時回傳 null。
+ */
+function resolveNonFullBlockAlias(typeId) {
+    if (NON_FULL_ALIAS_CACHE.has(typeId)) return NON_FULL_ALIAS_CACHE.get(typeId);
+
+    // 1. 先查明確指定的字典，這個優先權最高
+    if (BLOCK_FALLBACK_MAP[typeId]) {
+        NON_FULL_ALIAS_CACHE.set(typeId, BLOCK_FALLBACK_MAP[typeId]);
+        return BLOCK_FALLBACK_MAP[typeId];
+    }
+
+    // 2. 字典裡沒有的話，再用後綴自動推算
+    const bareId = typeId.includes(":") ? typeId.split(":")[1] : typeId;
+    let result = null;
+
+    for (const suffix of NON_FULL_BLOCK_SUFFIXES) {
+        if (!bareId.endsWith(suffix)) continue;
+
+        const base = bareId.slice(0, -suffix.length);
+
+        if (WOOD_SPECIES.has(base)) {
+            result = `minecraft:${base}_planks`;
+        } else if (IRREGULAR_BASE_BLOCK[base]) {
+            result = IRREGULAR_BASE_BLOCK[base];
+        } else {
+            // 沒有特例對照時，先試著直接把 base 當作完整方塊 id 猜一次
+            // (例如 "sandstone_stairs" -> "minecraft:sandstone")
+            result = `minecraft:${base}`;
+        }
+        break;
+    }
+
+    NON_FULL_ALIAS_CACHE.set(typeId, result);
+    return result;
+}
+
+// ==========================================
+// 1-2. 方塊旋轉 (角度) 輔助工具
+//      負責讓方塊自身的朝向 (門、樓梯、原木等) 隨著
+//      投影/貼上的旋轉角度一起轉動，而不是永遠維持原始朝向
+// ==========================================
+
+// 與 rotateRelCoords 的座標旋轉方向保持一致：順時鐘 90 度為一個單位
+const HORIZONTAL_CYCLE = ["north", "east", "south", "west"];
+
+function rotateHorizontalValue(value, rotation) {
+    const idx = HORIZONTAL_CYCLE.indexOf(value);
+    if (idx === -1) return value; // 不是水平方向 (例如 up / down)，不處理
+    return HORIZONTAL_CYCLE[(idx + rotation) % 4];
+}
+
+// 舊版樓梯 "weirdo_direction" 的方向對照 (0=east,1=west,2=south,3=north)
+const STAIR_DIRECTION_CYCLE = ["east", "west", "south", "north"];
+
+function rotateStatesInPlace(states, rotation) {
+    if (!states || rotation === 0) return states;
+
+    if (typeof states["minecraft:cardinal_direction"] === "string") {
+        states["minecraft:cardinal_direction"] = rotateHorizontalValue(states["minecraft:cardinal_direction"], rotation);
+    }
+
+    if (typeof states["minecraft:facing_direction"] === "string") {
+        states["minecraft:facing_direction"] = rotateHorizontalValue(states["minecraft:facing_direction"], rotation);
+    }
+
+    if (typeof states["minecraft:block_face"] === "string") {
+        states["minecraft:block_face"] = rotateHorizontalValue(states["minecraft:block_face"], rotation);
+    }
+
+    if (typeof states["weirdo_direction"] === "number") {
+        const cur = STAIR_DIRECTION_CYCLE[states["weirdo_direction"]] ?? "east";
+        const rotated = rotateHorizontalValue(cur, rotation);
+        const newIdx = STAIR_DIRECTION_CYCLE.indexOf(rotated);
+        if (newIdx !== -1) states["weirdo_direction"] = newIdx;
+    }
+
+    if (typeof states["minecraft:pillar_axis"] === "string" && rotation % 2 === 1) {
+        // 90 度或 270 度旋轉時，原木的 X / Z 軸互換；Y 軸原木不受影響
+        if (states["minecraft:pillar_axis"] === "x") states["minecraft:pillar_axis"] = "z";
+        else if (states["minecraft:pillar_axis"] === "z") states["minecraft:pillar_axis"] = "x";
+    }
+
+    return states;
+}
+
+/**
+ * 依旋轉角度回傳一個「朝向已修正」的方塊排列 (permutation)。
+ * 只調整已知的方向性狀態，其餘狀態原樣保留；失敗時安全退回原始 permutation。
+ */
+function rotatePermutation(permutation, rotation) {
+    if (!permutation || rotation === 0) return permutation;
+    try {
+        const typeId = permutation.type.id;
+        const states = { ...permutation.getAllStates() };
+        rotateStatesInPlace(states, rotation);
+        return BlockPermutation.resolve(typeId, states);
+    } catch (e) {
+        return permutation;
+    }
+}
+
+/**
+ * 依右鍵點擊的面向，回傳應該疊加的座標偏移量。
+ * 用於讓投影/貼上的基準點對齊到「點擊面的外側」(例如點擊地面 = 蓋在地面之上)，
+ * 而不是直接嵌入被點擊的方塊本身 (這正是造成投影「高度」偏低 1 格的原因)。
+ */
+function getFaceOffset(face) {
+    switch (face) {
+        case Direction.Up: return { x: 0, y: 1, z: 0 };
+        case Direction.Down: return { x: 0, y: -1, z: 0 };
+        case Direction.North: return { x: 0, y: 0, z: -1 };
+        case Direction.South: return { x: 0, y: 0, z: 1 };
+        case Direction.East: return { x: 1, y: 0, z: 0 };
+        case Direction.West: return { x: -1, y: 0, z: 0 };
+        default: return { x: 0, y: 1, z: 0 }; // 沒有面向資訊時，預設蓋在方塊上方
+    }
+}
+
+function applyFaceOffset(pos, face) {
+    const off = getFaceOffset(face);
+    return { x: pos.x + off.x, y: pos.y + off.y, z: pos.z + off.z };
+}
 
 // ==========================================
 // 2. 基礎輔助工具函式
@@ -103,13 +512,20 @@ function getPlayerCardinalDirection(player) {
     return 0;                                  // 南 (+Z)
 }
 
+/**
+ * 依角度差旋轉相對座標 (relX, relZ)。
+ * 注意：這裡的 rotation 必須是「目前方向 - 複製當下方向」的差值 (0~3)，
+ * 不能直接傳入絕對方向，否則複製與貼上朝向剛好相同時仍可能被錯誤旋轉。
+ * rotation=0 時保證直接回傳 { rx: relX, rz: relZ }，完全不偏移。
+ */
 function rotateRelCoords(relX, relZ, sizeX, sizeZ, rotation) {
-    switch (rotation) {
-        case 1: return { rx: -relZ, rz: relX };
-        case 2: return { rx: -relX, rz: -relZ };
-        case 3: return { rx: relZ, rz: -relX };
+    const rot = ((rotation % 4) + 4) % 4;
+    switch (rot) {
+        case 1: return { rx: -relZ, rz: relX };   // 順時鐘 90 度
+        case 2: return { rx: -relX, rz: -relZ };  // 180 度
+        case 3: return { rx: relZ, rz: -relX };   // 逆時鐘 90 度 (270 度)
         case 0:
-        default: return { rx: relX, rz: relZ };
+        default: return { rx: relX, rz: relZ };   // 方向一致，不旋轉
     }
 }
 
@@ -225,14 +641,22 @@ function refreshHologramEntities(player, preview) {
 
             createdEntities.push(holo);
 
-            // 正確賦予材質 (透過腳本內部動態轉化避免預設退回泥土)
-            system.run(() => {
-                if (!holo.isValid()) return;
-                try {
-                    const cleanTypeId = b.typeId.includes(":") ? b.typeId : `minecraft:${b.typeId}`;
-                    holo.runCommandAsync(`event entity @s set_block_${cleanTypeId.replace("minecraft:", "")}`).catch(() => {});
-                } catch (e) {}
-            });
+            // 依實際方塊 typeId 設定材質索引 entity property，
+            // render controller 會依此索引切換成對應的貼圖陣列成員，
+            // 使全息投影的材質與被複製/選取的方塊材質一致。
+            const texIndex = getTextureIndexForBlock(b.typeId);
+            try {
+                holo.setProperty("custom:tex_index", texIndex);
+            } catch (e) {}
+
+            // 記錄這個全息實體對應投影裡的哪一個相對座標，
+            // 讓玩家右鍵點擊這個實體時，能反查出該放哪個真實方塊 (Easy-Place)。
+            try {
+                holo.setDynamicProperty("bc:relX", b.relX);
+                holo.setDynamicProperty("bc:relY", b.relY);
+                holo.setDynamicProperty("bc:relZ", b.relZ);
+                holo.setDynamicProperty("bc:ownerId", player.id);
+            } catch (e) {}
 
         } catch (e) {}
     }
@@ -251,13 +675,15 @@ world.beforeEvents.playerLeave.subscribe((event) => {
 // 4. 事件監聽 (Event Handlers)
 // ==========================================
 
-function handleToolInteraction(player, item, hitBlock) {
+function handleToolInteraction(player, item, hitBlock, face) {
     if (!player || !item) return;
     const itemTypeId = item.typeId;
 
     if (itemTypeId === "custom:block_counter_selector") {
         if (!hitBlock) {
-            hitBlock = player.getBlockFromViewDirection({ maxDistance: 7 })?.block;
+            const viewHit = player.getBlockFromViewDirection({ maxDistance: 7 });
+            hitBlock = viewHit?.block;
+            if (face === undefined) face = viewHit?.face;
         }
         if (!hitBlock) {
             player.sendMessage("§c[提示] 未瞄準任何方塊，請靠近方塊後再按右鍵！");
@@ -272,8 +698,21 @@ function handleToolInteraction(player, item, hitBlock) {
         const pId = player.id;
 
         if (playerClipboards.has(pId) && !player.isSneaking) {
-            const rot = getPlayerCardinalDirection(player);
-            setPlacementTarget(player, blockPos, rot);
+            // 不蹲下的右鍵 = 設定/更新投影目標起點。
+            // 蹲下右鍵永遠保留給 P1/P2 選區使用 (即使剪貼簿已經有資料)，
+            // 這樣你才能隨時蹲下重新框選/測量別的區域，
+            // 不會不小心把蹲下點擊也誤判成「投影放出」，
+            // 導致舊投影跟新框選的區域疊在一起變成破圖。
+            const clip = playerClipboards.get(pId);
+            const currentDirection = getPlayerCardinalDirection(player);
+            const sourceDirection = clip.sourceDirection ?? 0;
+            // 用「目前面向」與「複製當下面向」的差值來旋轉，
+            // 這樣只要貼上時跟複製時面向同一個方向，角度差=0，完全不旋轉。
+            const rotationDifference = (currentDirection - sourceDirection + 4) % 4;
+            // 用點擊面偏移，讓結構「蓋在」點擊的方塊之上/外側，
+            // 而不是直接嵌入該方塊本身 (修正投影高度低了一格的問題)
+            const targetPos = applyFaceOffset(blockPos, face);
+            setPlacementTarget(player, targetPos, rotationDifference);
             return;
         }
 
@@ -319,11 +758,11 @@ function handleToolInteraction(player, item, hitBlock) {
 }
 
 world.afterEvents.itemUse.subscribe((event) => {
-    try { handleToolInteraction(event.source, event.itemStack, null); } catch (e) {}
+    try { handleToolInteraction(event.source, event.itemStack, null, undefined); } catch (e) {}
 });
 
 world.afterEvents.playerInteractWithBlock.subscribe((event) => {
-    try { handleToolInteraction(event.player, event.itemStack, event.block); } catch (e) {}
+    try { handleToolInteraction(event.player, event.itemStack, event.block, event.face); } catch (e) {}
 });
 
 // ==========================================
@@ -365,12 +804,204 @@ function copyArea(player, p1, p2) {
             y: maxY - minY + 1,
             z: maxZ - minZ + 1
         },
-        blocks: blocks
+        blocks: blocks,
+        // 記錄複製當下玩家面向的方向，貼上時要用「目前方向 - 這個方向」的差值
+        // 來旋轉，而不是直接套用貼上當下的絕對方向，否則複製與貼上時
+        // 只要朝向剛好不是「南(0)」，即使貼上時面向跟複製時完全相同，
+        // 也會被誤判成需要旋轉，導致投影無故轉了 90 度。
+        sourceDirection: getPlayerCardinalDirection(player)
     };
 
     playerClipboards.set(player.id, clipboardData);
     player.sendMessage(`§a[系統] 已成功複製區域！共包含 ${blocks.length} 個方塊。`);
     player.sendMessage(`§e▶ 請拿「選區工具」對目標位置右鍵，即可確定貼上起點！`);
+}
+
+// ==========================================
+// 5-1. 生存模式：依背包材料自動建造投影
+// ==========================================
+
+function isPlayerInSurvival(player) {
+    try {
+        if (typeof player.getGameMode === "function") {
+            return player.getGameMode() === GameMode.Survival;
+        }
+    } catch (e) {}
+    try {
+        const found = player.dimension.getPlayers({
+            gameMode: GameMode.Survival,
+            location: player.location,
+            maxDistance: 3
+        });
+        return found.some((p) => p.id === player.id);
+    } catch (e) {
+        return false;
+    }
+}
+
+/**
+ * 嘗試用背包裡的材料，放置「一個」指定的投影方塊。
+ * 成功會實際改變世界方塊、扣掉 1 個背包物品，並回傳 true；
+ * 背包沒有材料或發生錯誤則回傳 false，投影原封不動保留。
+ * 這個函式是「手動點擊放置」跟「一鍵由下而上建造」共用的核心邏輯。
+ */
+function placeOneBlockFromInventory(player, container, dim, b, rotation, origin) {
+    if (!b.typeId || b.typeId === "minecraft:air") return false;
+
+    const rotated = rotateRelCoords(b.relX, b.relZ, 0, 0, rotation);
+    const worldX = origin.x + rotated.rx;
+    const worldY = origin.y + b.relY;
+    const worldZ = origin.z + rotated.rz;
+
+    const currentBlock = dim.getBlock({ x: worldX, y: worldY, z: worldZ });
+    if (!currentBlock) return false;
+    if (currentBlock.typeId === b.typeId) return true; // 已經是正確方塊，視為已完成
+
+    // 在背包中尋找相符的方塊物品
+    let slotIndex = -1;
+    for (let i = 0; i < container.size; i++) {
+        const item = container.getItem(i);
+        if (item && item.typeId === b.typeId) { slotIndex = i; break; }
+    }
+    if (slotIndex === -1) return false; // 背包沒有這個材料
+
+    try {
+        const rotatedPermutation = b.permutation ? rotatePermutation(b.permutation, rotation) : null;
+        if (rotatedPermutation) {
+            currentBlock.setPermutation(rotatedPermutation);
+        } else {
+            currentBlock.setType(b.typeId);
+        }
+
+        const item = container.getItem(slotIndex);
+        if (item.amount > 1) {
+            item.amount -= 1;
+            container.setItem(slotIndex, item);
+        } else {
+            container.setItem(slotIndex, undefined);
+        }
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+/**
+ * Litematica「Easy-Place」互動模式：玩家自己右鍵點擊某一格全息投影，
+ * 才會用背包材料放置「那一格」，不會自動掃描全部投影。
+ */
+function tryPlaceSingleHologramBlock(player, holoEntity) {
+    if (!isPlayerInSurvival(player)) {
+        player.sendMessage("§c[提示] 只有生存模式才能用背包材料放置投影方塊！");
+        return;
+    }
+
+    const pId = player.id;
+    const preview = playerPreviews.get(pId);
+    if (!preview) return;
+
+    let relX, relY, relZ;
+    try {
+        relX = holoEntity.getDynamicProperty("bc:relX");
+        relY = holoEntity.getDynamicProperty("bc:relY");
+        relZ = holoEntity.getDynamicProperty("bc:relZ");
+    } catch (e) { return; }
+    if (relX === undefined || relY === undefined || relZ === undefined) return;
+
+    const idx = preview.blocks.findIndex(bb => bb.relX === relX && bb.relY === relY && bb.relZ === relZ);
+    if (idx === -1) return; // 這格可能已經被別的方式蓋掉了
+    const b = preview.blocks[idx];
+
+    const invComp = player.getComponent("minecraft:inventory") || player.getComponent(BlockComponentTypes.Inventory);
+    if (!invComp || !invComp.container) return;
+
+    const placed = placeOneBlockFromInventory(player, invComp.container, player.dimension, b, preview.rotation, preview.origin);
+
+    if (!placed) {
+        player.sendMessage(`§c[提示] 背包裡沒有 ${b.typeId.replace("minecraft:", "")}，無法放置這一格！`);
+        return;
+    }
+
+    preview.blocks.splice(idx, 1);
+    playerPreviews.set(pId, preview);
+    refreshHologramEntities(player, preview);
+    try { player.playSound("dig.wood", { volume: 0.5, pitch: 1.4 }); } catch (e) {}
+
+    if (preview.blocks.length === 0) {
+        player.sendMessage("§a🎉[完成] 投影結構已全部用背包材料建造完成！");
+        clearPlayerBorder(pId);
+        clearHologramEntities(pId, player);
+        playerPreviews.delete(pId);
+    }
+}
+
+world.afterEvents.playerInteractWithEntity.subscribe((event) => {
+    try {
+        if (event.target?.typeId === "custom:hologram_block") {
+            tryPlaceSingleHologramBlock(event.player, event.target);
+        }
+    } catch (e) {}
+});
+
+/**
+ * 選單按鈕用：一次把整個投影「由下而上」自動建造完成 (仍然只消耗背包裡實際擁有的材料，
+ * 缺料的格子會照樣保留投影，不會強行跳過中間樓層)。
+ * 跟 tryPlaceSingleHologramBlock 的差異：這個是一次處理所有格子，並保證由下往上蓋，
+ * 不會出現上層先蓋好、下層還空著的懸空情況。
+ */
+function buildFromInventoryBottomUp(player, preview) {
+    if (!preview || !preview.blocks || preview.blocks.length === 0) {
+        player.sendMessage("§c[錯誤] 目前沒有投影可以建造！");
+        return;
+    }
+    if (!isPlayerInSurvival(player)) {
+        player.sendMessage("§c[提示] 只有生存模式才能用背包材料自動建造！");
+        return;
+    }
+
+    const invComp = player.getComponent("minecraft:inventory") || player.getComponent(BlockComponentTypes.Inventory);
+    if (!invComp || !invComp.container) return;
+    const container = invComp.container;
+    const dim = player.dimension;
+    const { origin, rotation, layerFilter } = preview;
+
+    // 由下而上排序：relY 小的 (最底層) 排最前面，同一層內用 relZ、relX 排序讓建造順序更穩定
+    const ordered = [...preview.blocks].sort((a, c) => {
+        if (a.relY !== c.relY) return a.relY - c.relY;
+        if (a.relZ !== c.relZ) return a.relZ - c.relZ;
+        return a.relX - c.relX;
+    });
+
+    const remaining = [];
+    let filledCount = 0;
+
+    for (const b of ordered) {
+        if (layerFilter !== -1 && b.relY !== layerFilter) { remaining.push(b); continue; }
+
+        const placed = placeOneBlockFromInventory(player, container, dim, b, rotation, origin);
+        if (placed) {
+            filledCount++;
+        } else {
+            remaining.push(b);
+        }
+    }
+
+    if (filledCount > 0) {
+        preview.blocks = remaining;
+        playerPreviews.set(player.id, preview);
+        refreshHologramEntities(player, preview);
+        try { player.playSound("random.orb", { volume: 0.5, pitch: 1.2 }); } catch (e) {}
+        player.sendMessage(`§a[由下而上建造] 已使用背包材料填入 ${filledCount} 個方塊！`);
+
+        if (preview.blocks.length === 0) {
+            player.sendMessage("§a🎉[完成] 投影結構已全部用背包材料建造完成！");
+            clearPlayerBorder(player.id);
+            clearHologramEntities(player.id, player);
+            playerPreviews.delete(player.id);
+        }
+    } else {
+        player.sendMessage("§c[提示] 背包裡沒有找到任何投影需要的材料！");
+    }
 }
 
 function setPlacementTarget(player, targetPos, rotation = 0) {
@@ -387,6 +1018,7 @@ function setPlacementTarget(player, targetPos, rotation = 0) {
 
     playerPreviews.set(player.id, previewData);
     player.sendMessage(`§b[Construct 投影啟動] 基點對齊至：(${targetPos.x}, ${targetPos.y}, ${targetPos.z})`);
+    player.sendMessage("§7▶ 生存模式：右鍵點擊全息投影可用背包材料放置該格 (Easy-Place)，或用選單「由下而上」一次建造。");
 
     startConstructProjection(player, previewData);
 }
@@ -403,10 +1035,11 @@ function startConstructProjection(player, preview) {
     const intervalId = system.runInterval(() => {
         if (!player.isValid()) return clearPlayerBorder(pId);
 
-        const activePreview = playerPreviews.get(pId) || preview;
+        const stillPreview = playerPreviews.get(pId);
+        if (!stillPreview) return;
 
-        for (const b of activePreview.blocks) {
-            if (activePreview.layerFilter !== -1 && b.relY !== activePreview.layerFilter) continue;
+        for (const b of stillPreview.blocks) {
+            if (stillPreview.layerFilter !== -1 && b.relY !== stillPreview.layerFilter) continue;
 
             const rotated = rotateRelCoords(b.relX, b.relZ, size.x, size.z, rotation);
             const worldX = origin.x + rotated.rx;
@@ -455,7 +1088,8 @@ function pasteStructure(player) {
 
             if (targetBlock) {
                 if (b.permutation) {
-                    targetBlock.setPermutation(b.permutation);
+                    // 依貼上時選擇的旋轉角度，把方塊自身的朝向(門/樓梯/原木等)一併轉正
+                    targetBlock.setPermutation(rotatePermutation(b.permutation, rotation));
                 } else {
                     targetBlock.setType(b.typeId);
                 }
@@ -624,66 +1258,149 @@ function openMainMenu(player) {
     const p1Text = sel.p1 ? `${sel.p1.x}, ${sel.p1.y}, ${sel.p1.z}` : "未設定";
     const p2Text = sel.p2 ? `${sel.p2.x}, ${sel.p2.y}, ${sel.p2.z}` : "未設定";
     const clipText = clip ? `已複製 (${clip.blocks.length} 個方塊)` : "無";
+    const rotText = preview ? `${(preview.rotation % 4 + 4) % 4 * 90}°` : "0°";
 
     const form = new ActionFormData();
     form.title("方塊統計控制台");
-    form.body(`目前座標：\nP1: §a${p1Text}\n§rP2: §a${p2Text}\n剪貼簿狀態：§e${clipText}`);
-    
-    form.button("📊 方塊統計與分層檢視");
-    form.button("📋 複製目前區域");
-    
+    form.body(`目前座標：\nP1: §a${p1Text}\n§rP2: §a${p2Text}\n剪貼簿狀態：§e${clipText}\n投影角度：§b${rotText}`);
+
+    // 用陣列依序註冊按鈕文字與對應動作，避免手動計算 index 造成錯位。
+    const actions = [];
+
+    actions.push({
+        label: "📊 方塊統計與分層檢視",
+        run: () => {
+            if (!sel.p1 || !sel.p2) return player.sendMessage("§c[錯誤] 請先設定 P1 與 P2！");
+            countBlocks(player, sel.p1, sel.p2);
+        }
+    });
+
+    actions.push({
+        label: "📋 複製目前區域",
+        run: () => {
+            if (!sel.p1 || !sel.p2) return player.sendMessage("§c[錯誤] 請先設定 P1 與 P2！");
+            copyArea(player, sel.p1, sel.p2);
+        }
+    });
+
+    if (clip) {
+        actions.push({
+            label: "📍 手動輸入放置起點座標",
+            run: () => openPlacementCoordForm(player)
+        });
+    }
+
     if (preview) {
-        form.button("🥞 切換分層顯示 (Layer Mode)");
-        form.button("✨ 一鍵貼上/建置結構");
+        actions.push({
+            label: "🥞 切換分層顯示 (Layer Mode)",
+            run: () => openLayerSelectMenu(player, preview)
+        });
+        actions.push({
+            label: `🔄 旋轉投影角度 (目前 ${rotText})`,
+            run: () => rotatePreviewInPlace(player, preview)
+        });
+        actions.push({
+            label: "✨ 一鍵貼上/建置結構",
+            run: () => pasteStructure(player)
+        });
+        actions.push({
+            label: "🧱 生存模式：用背包材料建造 (由下而上)",
+            run: () => buildFromInventoryBottomUp(player, preview)
+        });
     }
 
     if (hasUndo) {
-        form.button("↩️ 復原 (Undo) 上一次貼上/編輯");
+        actions.push({
+            label: "↩️ 復原 (Undo) 上一次貼上/編輯",
+            run: () => performUndo(player)
+        });
     }
 
-    form.button("⚙️ 自訂過濾方塊清單");
-    form.button("✏️ 手動修改座標");
-    form.button("🛠️ 區域編輯 (清空/填滿/替換)");
-    form.button("🗑️ 清除選區與投影");
+    actions.push({
+        label: "⚙️ 自訂過濾方塊清單",
+        run: () => openFilterMenu(player)
+    });
+    actions.push({
+        label: "✏️ 手動修改座標",
+        run: () => openCoordForm(player, sel.p1 || { x: 0, y: 0, z: 0 }, sel.p2 || { x: 0, y: 0, z: 0 })
+    });
+    actions.push({
+        label: "🛠️ 區域編輯 (清空/填滿/替換)",
+        run: () => {
+            if (!sel.p1 || !sel.p2) return player.sendMessage("§c[錯誤] 請先設定 P1 與 P2！");
+            openAreaEditForm(player, sel.p1, sel.p2);
+        }
+    });
+    actions.push({
+        label: "🗑️ 清除選區與投影",
+        run: () => {
+            playerSelections.delete(player.id);
+            playerClipboards.delete(player.id);
+            playerPreviews.delete(player.id);
+            clearPlayerBorder(player.id);
+            clearHologramEntities(player.id, player);
+            player.sendMessage("§e[系統] 已清除所有座標與投影狀態，蹲下+右鍵可重新框選 P1/P2。");
+        }
+    });
+
+    for (const action of actions) form.button(action.label);
 
     safeShowForm(player, form, (res) => {
-        let btnIndex = res.selection;
+        const action = actions[res.selection];
+        if (action) action.run();
+    });
+}
 
-        if (btnIndex === 0) {
-            if (!sel.p1 || !sel.p2) return player.sendMessage("§c[錯誤] 請先設定 P1 與 P2！");
-            countBlocks(player, sel.p1, sel.p2);
-        } else if (btnIndex === 1) {
-            if (!sel.p1 || !sel.p2) return player.sendMessage("§c[錯誤] 請先設定 P1 與 P2！");
-            copyArea(player, sel.p1, sel.p2);
-        } else if (preview && btnIndex === 2) {
-            openLayerSelectMenu(player, preview);
-        } else if (preview && btnIndex === 3) {
-            pasteStructure(player);
-        } else {
-            let offset = 2;
-            if (preview) offset += 2;
-            if (hasUndo && btnIndex === offset) {
-                performUndo(player);
-                return;
-            }
-            if (hasUndo) offset += 1;
+/**
+ * 在原地把目前投影角度切換到下一個 90 度增量 (0 -> 90 -> 180 -> 270 -> 0)，
+ * 不需要玩家重新站位、重新面向，馬上刷新全息實體。
+ */
+function rotatePreviewInPlace(player, preview) {
+    if (!preview) return;
+    preview.rotation = ((preview.rotation ?? 0) + 1) % 4;
+    playerPreviews.set(player.id, preview);
+    refreshHologramEntities(player, preview);
+    player.sendMessage(`§b[投影] 已旋轉至 ${preview.rotation * 90}°`);
+    // 注意：這裡故意「不」自動重新打開選單。
+    // ActionFormData 選單是全螢幕的，選完按鈕後會先自動關閉；
+    // 如果馬上呼叫 openMainMenu() 重開，玩家會完全看不到世界中
+    // 全息投影其實已經即時旋轉了 (選單瞬間又蓋滿畫面)，
+    // 感覺就像「按了沒反應」。拿掉這行，讓玩家能實際看到
+    // 全息投影在原地旋轉，跟 Litematica 一樣；要做其他操作
+    // 再用工具重新開一次選單即可。
+}
 
-            if (btnIndex === offset) {
-                openFilterMenu(player);
-            } else if (btnIndex === offset + 1) {
-                openCoordForm(player, sel.p1 || { x: 0, y: 0, z: 0 }, sel.p2 || { x: 0, y: 0, z: 0 });
-            } else if (btnIndex === offset + 2) {
-                if (!sel.p1 || !sel.p2) return player.sendMessage("§c[錯誤] 請先設定 P1 與 P2！");
-                openAreaEditForm(player, sel.p1, sel.p2);
-            } else if (btnIndex === offset + 3) {
-                playerSelections.delete(player.id);
-                playerClipboards.delete(player.id);
-                playerPreviews.delete(player.id);
-                clearPlayerBorder(player.id);
-                clearHologramEntities(player.id, player);
-                player.sendMessage("§e[系統] 已清除所有座標與投影狀態。");
-            }
+/**
+ * 讓玩家直接輸入 X Y Z 座標，把投影起點設定在該座標，
+ * 不需要親自走到該處點擊方塊。
+ */
+function openPlacementCoordForm(player) {
+    const clip = playerClipboards.get(player.id);
+    if (!clip) return player.sendMessage("§c[錯誤] 請先複製一個區域，剪貼簿才有結構可以放置！");
+
+    const preview = playerPreviews.get(player.id);
+    const fallback = preview ? preview.origin : player.location;
+
+    const form = new ModalFormData();
+    form.title("手動輸入放置起點座標");
+    form.textField("X 座標", "例如：100", String(Math.floor(fallback.x)));
+    form.textField("Y 座標", "例如：-60", String(Math.floor(fallback.y)));
+    form.textField("Z 座標", "例如：200", String(Math.floor(fallback.z)));
+
+    safeShowForm(player, form, (res) => {
+        if (res.canceled || !res.formValues) return;
+        const [xStr, yStr, zStr] = res.formValues;
+        const x = parseInt(xStr, 10);
+        const y = parseInt(yStr, 10);
+        const z = parseInt(zStr, 10);
+
+        if (Number.isNaN(x) || Number.isNaN(y) || Number.isNaN(z)) {
+            player.sendMessage("§c[錯誤] 座標必須是整數！");
+            return;
         }
+
+        const rotation = preview ? preview.rotation : 0;
+        setPlacementTarget(player, { x, y, z }, rotation);
     });
 }
 
@@ -952,7 +1669,7 @@ function openCoordForm(player, p1, p2) {
     form.textField("[P1 座標] (x y z)", "例如: 10 -60 15", `${p1.x} ${p1.y} ${p1.z}`);
     form.textField("[P2 座標] (x y z)", "例如: 20 -50 25", `${p2.x} ${p2.y} ${p2.z}`);
 
-    safeShowForm(player, response => {
+    safeShowForm(player, form, response => {
         const [p1Str, p2Str] = response.formValues;
         const parsePos = (str) => {
             const parts = str.trim().split(/\s+/).map(Number);

@@ -4,14 +4,14 @@
     "description": "3D Block Counter Resource Pack",
     "name": "BlockCounter RP",
     "uuid": "9d4b2f8e-6c1a-4e7f-a3d5-8b2c4f6a9e1d",
-    "version": [1, 0, 0],
+    "version": [1, 0, 4],
     "min_engine_version": [1, 20, 80]
   },
   "modules": [
     {
       "type": "resources",
       "uuid": "1b7e9d3f-4a6c-4c8e-9f2b-5d3a7c9e1f4b",
-      "version": [1, 0, 0]
+      "version": [1, 0, 4]
     }
   ]
 }

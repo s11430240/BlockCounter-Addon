@@ -5,7 +5,18 @@
       "identifier": "custom:hologram_block",
       "is_spawnable": true,
       "is_summonable": true,
-      "is_experimental": false
+      "is_experimental": false,
+      "properties": {
+        "custom:tex_index": {
+          "type": "int",
+          "range": [
+            0,
+            132
+          ],
+          "default": 0,
+          "client_sync": true
+        }
+      }
     },
     "components": {
       "minecraft:collision_box": {

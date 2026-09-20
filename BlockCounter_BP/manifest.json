@@ -4,7 +4,7 @@
     "description": "3D Block Counter BP",
     "name": "BlockCounter BP",
     "uuid": "6a1e4f2c-9b3d-4a7e-8c1f-3d5b7e9a2c4f",
-    "version": [1, 0, 0],
+    "version": [1, 0, 4],
     "min_engine_version": [1, 20, 80]
   },
   "modules": [
@@ -12,7 +12,7 @@
       "type": "script",
       "language": "javascript",
       "uuid": "2f8c6a1e-4b9d-4f3a-8e5b-1c7a9d2b4f6e",
-      "version": [1, 0, 0],
+      "version": [1, 0, 4],
       "entry": "scripts/main.js"
     }
   ],
