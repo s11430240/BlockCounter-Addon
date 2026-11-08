@@ -12,7 +12,7 @@ import {
     ActionFormData 
 } from "@minecraft/server-ui";
 
-const BLOCKCOUNTER_VERSION = "1.1.1";
+const BLOCKCOUNTER_VERSION = "1.1.2";
 
 // ==========================================
 // 1. 全域變數與數據儲存
@@ -862,6 +862,8 @@ function refreshHologramEntities(player, preview) {
     const { origin, size, blocks, rotation, layerFilter } = preview;
     const dim = player.dimension;
     const createdEntities = [];
+    const unknownTextureTypes = new Set();
+    const texturePropertyErrors = [];
 
     for (const b of blocks) {
         if (layerFilter !== -1 && b.relY !== layerFilter) continue;
@@ -885,14 +887,20 @@ function refreshHologramEntities(player, preview) {
             // 依實際方塊 typeId 設定材質索引 entity property，
             // render controller 會依此索引切換成對應的貼圖陣列成員，
             // 使全息投影的材質與被複製/選取的方塊材質一致。
+            const textureIndex = getTextureIndexForBlock(b.typeId, b.permutation);
             const faces = getTextureFacesForBlock(b.typeId, b.permutation);
+            if (textureIndex === UNKNOWN_TEXTURE_INDEX) {
+                unknownTextureTypes.add(b.typeId);
+            }
             try {
-                holo.setProperty("custom:tex_index", getTextureIndexForBlock(b.typeId, b.permutation));
+                holo.setProperty("custom:tex_index", textureIndex);
                 holo.setProperty("custom:tex_side", faces.side);
                 holo.setProperty("custom:tex_top", faces.top);
                 holo.setProperty("custom:tex_bottom", faces.bottom);
                 holo.setProperty("custom:multi_face", faces.multiFace ? 1 : 0);
-            } catch (e) {}
+            } catch (error) {
+                texturePropertyErrors.push(`${b.typeId}: ${error}`);
+            }
 
             // 記錄這個全息實體對應投影裡的哪一個相對座標，
             // 讓玩家右鍵點擊這個實體時，能反查出該放哪個真實方塊 (Easy-Place)。
@@ -903,10 +911,25 @@ function refreshHologramEntities(player, preview) {
                 holo.setDynamicProperty("bc:ownerId", player.id);
             } catch (e) {}
 
-        } catch (e) {}
+        } catch (error) {
+            console.warn(`[BlockCounter] 建立 ${b.typeId} 投影實體失敗: ${error}`);
+        }
     }
 
     activeHologramEntities.set(pId, createdEntities);
+
+    if (unknownTextureTypes.size > 0) {
+        const unknownTypes = [...unknownTextureTypes];
+        const displayedTypes = unknownTypes.slice(0, 8).join(", ");
+        const remainingCount = unknownTypes.length - 8;
+        const remainingText = remainingCount > 0 ? `，另有 ${remainingCount} 種` : "";
+        player.sendMessage(`§c[材質診斷] 找不到以下方塊的材質：${displayedTypes}${remainingText}`);
+    }
+
+    if (texturePropertyErrors.length > 0) {
+        console.warn(`[BlockCounter] ${texturePropertyErrors.join(" | ")}`);
+        player.sendMessage(`§c[材質診斷] ${texturePropertyErrors.length} 個投影無法設定材質屬性，請查看遊戲內容記錄。`);
+    }
 }
 
 world.beforeEvents.playerLeave.subscribe((event) => {
