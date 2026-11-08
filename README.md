@@ -8,7 +8,8 @@ BlockCounter 是一個基於 Minecraft Bedrock Script API v1.13.0+ 開發的方�
 
 ## 版本與發布
 
-- 目前版本：1.1.0
+- 目前版本：1.1.1
+- 玩家每次進入世界時，聊天欄會顯示目前載入的 BlockCounter 版本；開啟方塊統計控制台時，也可在標題查看版本。
 - 每次功能或修正更新時，同步更新本文件、行為包／資源包版本與 `BlockCounter.mcaddon`。
 - 完成檢查後，將相關檔案提交並推送至 GitHub `main` 分支。
 

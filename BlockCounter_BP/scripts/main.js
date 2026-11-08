@@ -12,7 +12,7 @@ import {
     ActionFormData 
 } from "@minecraft/server-ui";
 
-world.sendMessage("§e[系統提示] BlockCounter v1.1.0 已成功載入！(若你沒看到這行版本號更新，代表遊戲還在用舊快取，請完全關閉遊戲重開)");
+const BLOCKCOUNTER_VERSION = "1.1.1";
 
 // ==========================================
 // 1. 全域變數與數據儲存
@@ -1518,7 +1518,7 @@ function openMainMenu(player) {
     const rotText = preview ? `${(preview.rotation % 4 + 4) % 4 * 90}°` : "0°";
 
     const form = new ActionFormData();
-    form.title("方塊統計控制台");
+    form.title(`方塊統計控制台 v${BLOCKCOUNTER_VERSION}`);
     form.body(`目前座標：\nP1: §a${p1Text}\n§rP2: §a${p2Text}\n剪貼簿狀態：§e${clipText}\n投影角度：§b${rotText}`);
 
     // 用陣列依序註冊按鈕文字與對應動作，避免手動計算 index 造成錯位。
@@ -1992,3 +1992,8 @@ function clearPlayerBorder(pId) {
         playerIntervals.delete(pId);
     }
 }
+
+world.afterEvents.playerSpawn.subscribe((event) => {
+    if (!event.initialSpawn) return;
+    event.player.sendMessage(`§e[系統提示] BlockCounter v${BLOCKCOUNTER_VERSION} 已載入`);
+});
