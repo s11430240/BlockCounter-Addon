@@ -23,8 +23,12 @@
         "width": 0.0,
         "height": 0.0
       },
+      "minecraft:push_through": {
+        "value": 1.0
+      },
       "minecraft:physics": {
-        "has_gravity": false
+        "has_gravity": false,
+        "has_collision": false
       }
     }
   }

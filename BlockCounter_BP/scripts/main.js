@@ -12,7 +12,7 @@ import {
     ActionFormData 
 } from "@minecraft/server-ui";
 
-world.sendMessage("§e[系統提示] BlockCounter v1.0.6 已成功載入！(若你沒看到這行版本號更新，代表遊戲還在用舊快取，請完全關閉遊戲重開)");
+world.sendMessage("§e[系統提示] BlockCounter v1.0.7 已成功載入！(若你沒看到這行版本號更新，代表遊戲還在用舊快取，請完全關閉遊戲重開)");
 
 // ==========================================
 // 1. 全域變數與數據儲存
@@ -243,6 +243,9 @@ function getTextureIndexForBlock(typeId, permutation) {
 const BLOCK_FALLBACK_MAP = {
     // --- 木頭家具類 (不是靠後綴推算得出的特殊方塊) ---
     "minecraft:bed": "minecraft:white_wool",
+    "minecraft:barrel": "minecraft:oak_planks",
+    "minecraft:chest": "minecraft:oak_planks",
+    "minecraft:trapped_chest": "minecraft:oak_planks",
     "minecraft:flower_pot": "minecraft:oak_planks",
     "minecraft:cauldron": "minecraft:iron_block",
     "minecraft:lectern": "minecraft:oak_planks",
@@ -662,9 +665,6 @@ function refreshHologramEntities(player, preview) {
         const worldY = origin.y + b.relY;
         const worldZ = origin.z + rotated.rz;
 
-        const currentBlock = dim.getBlock({ x: worldX, y: worldY, z: worldZ });
-        if (currentBlock && currentBlock.typeId === b.typeId) continue;
-
         try {
             // 生成基底全息實體
             const holo = dim.spawnEntity("custom:hologram_block", {
@@ -821,9 +821,9 @@ function copyArea(player, p1, p2) {
                 const b = dim.getBlock({ x, y, z });
                 if (b && !b.isAir) {
                     blocks.push({
-                        relX: x - minX,
-                        relY: y - minY,
-                        relZ: z - minZ,
+                        relX: x - p1.x,
+                        relY: y - p1.y,
+                        relZ: z - p1.z,
                         typeId: b.typeId,
                         permutation: b.permutation
                     });
@@ -837,6 +837,11 @@ function copyArea(player, p1, p2) {
             x: maxX - minX + 1,
             y: maxY - minY + 1,
             z: maxZ - minZ + 1
+        },
+        anchor: {
+            x: p1.x - minX,
+            y: p1.y - minY,
+            z: p1.z - minZ
         },
         blocks: blocks,
         // 記錄複製當下玩家面向的方向，貼上時要用「目前方向 - 這個方向」的差值
@@ -887,7 +892,7 @@ function placeOneBlockFromInventory(player, container, dim, b, rotation, origin)
     const worldY = origin.y + b.relY;
     const worldZ = origin.z + rotated.rz;
 
-    const currentBlock = dim.getBlock({ x: worldX, y: worldY, z: worldZ });
+
     if (!currentBlock) return false;
     if (currentBlock.typeId === b.typeId) return true; // 已經是正確方塊，視為已完成
 
@@ -1045,6 +1050,7 @@ function setPlacementTarget(player, targetPos, rotation = 0) {
     const previewData = {
         origin: targetPos,
         size: clip.size,
+        anchor: clip.anchor,
         blocks: clip.blocks,
         rotation: rotation,
         layerFilter: -1
@@ -1063,7 +1069,6 @@ function startConstructProjection(player, preview) {
 
     refreshHologramEntities(player, preview);
 
-    const { origin, size, rotation } = preview;
     const dim = player.dimension;
 
     const intervalId = system.runInterval(() => {
@@ -1075,10 +1080,10 @@ function startConstructProjection(player, preview) {
         for (const b of stillPreview.blocks) {
             if (stillPreview.layerFilter !== -1 && b.relY !== stillPreview.layerFilter) continue;
 
-            const rotated = rotateRelCoords(b.relX, b.relZ, size.x, size.z, rotation);
-            const worldX = origin.x + rotated.rx;
-            const worldY = origin.y + b.relY;
-            const worldZ = origin.z + rotated.rz;
+            const rotated = rotateRelCoords(b.relX, b.relZ, stillPreview.size.x, stillPreview.size.z, stillPreview.rotation);
+            const worldX = stillPreview.origin.x + rotated.rx;
+            const worldY = stillPreview.origin.y + b.relY;
+            const worldZ = stillPreview.origin.z + rotated.rz;
 
             const currentBlock = dim.getBlock({ x: worldX, y: worldY, z: worldZ });
 
@@ -1101,12 +1106,19 @@ function pasteStructure(player) {
     const dim = player.dimension;
     const { origin, size, rotation, blocks } = preview;
 
-    const minX = origin.x;
-    const maxX = origin.x + size.x - 1;
-    const minY = origin.y;
-    const maxY = origin.y + size.y - 1;
-    const minZ = origin.z;
-    const maxZ = origin.z + size.z - 1;
+    const anchor = preview.anchor ?? { x: 0, y: 0, z: 0 };
+    const corners = [
+        rotateRelCoords(-anchor.x, -anchor.z, size.x, size.z, rotation),
+        rotateRelCoords(size.x - 1 - anchor.x, -anchor.z, size.x, size.z, rotation),
+        rotateRelCoords(-anchor.x, size.z - 1 - anchor.z, size.x, size.z, rotation),
+        rotateRelCoords(size.x - 1 - anchor.x, size.z - 1 - anchor.z, size.x, size.z, rotation)
+    ];
+    const minX = origin.x + Math.min(...corners.map((corner) => corner.rx));
+    const maxX = origin.x + Math.max(...corners.map((corner) => corner.rx));
+    const minY = origin.y - anchor.y;
+    const maxY = minY + size.y - 1;
+    const minZ = origin.z + Math.min(...corners.map((corner) => corner.rz));
+    const maxZ = origin.z + Math.max(...corners.map((corner) => corner.rz));
 
     recordUndoSnapshot(player, minX, maxX, minY, maxY, minZ, maxZ);
 
