@@ -12,7 +12,19 @@ import {
     ActionFormData 
 } from "@minecraft/server-ui";
 
-const BLOCKCOUNTER_VERSION = "1.1.2";
+const BLOCKCOUNTER_VERSION = "1.1.3";
+const versionNotifiedPlayers = new Set();
+
+function notifyPlayerOfVersion(player) {
+    if (!player || versionNotifiedPlayers.has(player.id)) return;
+    try {
+        if (!player.isValid()) return;
+        player.sendMessage(`§e[系統提示] BlockCounter v${BLOCKCOUNTER_VERSION} 已載入`);
+        versionNotifiedPlayers.add(player.id);
+    } catch (error) {
+        console.warn(`[BlockCounter] 無法顯示版本資訊: ${error}`);
+    }
+}
 
 // ==========================================
 // 1. 全域變數與數據儲存
@@ -934,6 +946,7 @@ function refreshHologramEntities(player, preview) {
 
 world.beforeEvents.playerLeave.subscribe((event) => {
     if (event.player) {
+        versionNotifiedPlayers.delete(event.player.id);
         clearHologramEntities(event.player.id, event.player);
         clearPlayerBorder(event.player.id);
     }
@@ -2017,6 +2030,11 @@ function clearPlayerBorder(pId) {
 }
 
 world.afterEvents.playerSpawn.subscribe((event) => {
-    if (!event.initialSpawn) return;
-    event.player.sendMessage(`§e[系統提示] BlockCounter v${BLOCKCOUNTER_VERSION} 已載入`);
+    system.runTimeout(() => notifyPlayerOfVersion(event.player), 40);
 });
+
+system.runTimeout(() => {
+    for (const player of world.getPlayers()) {
+        notifyPlayerOfVersion(player);
+    }
+}, 40);
