@@ -2,6 +2,7 @@ import {
     world, 
     system, 
     ItemStack, 
+    BlockTypes,
     BlockComponentTypes, 
     BlockPermutation,
     Direction,
@@ -12,7 +13,7 @@ import {
     ActionFormData 
 } from "@minecraft/server-ui";
 
-const BLOCKCOUNTER_VERSION = "1.1.3";
+const BLOCKCOUNTER_VERSION = "1.1.5";
 const versionNotifiedPlayers = new Set();
 
 function notifyPlayerOfVersion(player) {
@@ -35,6 +36,7 @@ const playerIntervals = new Map();
 const playerFilterLists = new Map();
 const playerClipboards = new Map();
 const playerPreviews = new Map();
+const playerPendingRotations = new Map();
 const activeHologramEntities = new Map();
 
 // 儲存每個玩家上一次操作前區域的方塊數據 (Undo 機制)
@@ -282,7 +284,22 @@ const BLOCK_TEXTURE_TABLE = [
     [221, ["minecraft:bed_brown"]],
     [222, ["minecraft:bed_green"]],
     [223, ["minecraft:bed_red"]],
-    [224, ["minecraft:bed_black"]]
+    [224, ["minecraft:bed_black"]],
+    [225, ["minecraft:grass_top"]],
+    [226, ["minecraft:oak_log_top"]],
+    [227, ["minecraft:spruce_log_top"]],
+    [228, ["minecraft:birch_log_top"]],
+    [229, ["minecraft:jungle_log_top"]],
+    [230, ["minecraft:acacia_log_top"]],
+    [231, ["minecraft:dark_oak_log_top"]],
+    [232, ["minecraft:furnace_top"]],
+    [233, ["minecraft:crafting_table_top"]],
+    [234, ["minecraft:hay_block_top"]],
+    [235, ["minecraft:melon_top"]],
+    [236, ["minecraft:pumpkin_top"]],
+    [237, ["minecraft:mycelium_top"]],
+    [238, ["minecraft:dirt_podzol_top"]],
+    [239, ["minecraft:quartz_block_top"]]
 ];
 
 // 未知材質時使用 index 0 (RP 中的 hologram_unknown 棋盤格貼圖)
@@ -435,6 +452,56 @@ function getTextureFacesForBlock(typeId, permutation) {
         faces.top = 184;
         faces.bottom = 184;
         faces.side = 185;
+        faces.multiFace = true;
+    } else if (typeId === "minecraft:grass_block") {
+        faces.top = 225;
+        faces.bottom = 8;
+        faces.multiFace = true;
+    } else if (typeId.endsWith("_log")) {
+        const logTopIndex = {
+            "minecraft:oak_log": 226,
+            "minecraft:spruce_log": 227,
+            "minecraft:birch_log": 228,
+            "minecraft:jungle_log": 229,
+            "minecraft:acacia_log": 230,
+            "minecraft:dark_oak_log": 231
+        }[typeId];
+        if (logTopIndex !== undefined) {
+            faces.top = logTopIndex;
+            faces.bottom = logTopIndex;
+            faces.multiFace = true;
+        }
+    } else if (typeId === "minecraft:furnace") {
+        faces.top = 232;
+        faces.bottom = 232;
+        faces.multiFace = true;
+    } else if (typeId === "minecraft:crafting_table") {
+        faces.top = 233;
+        faces.bottom = 12;
+        faces.multiFace = true;
+    } else if (typeId === "minecraft:hay_block") {
+        faces.top = 234;
+        faces.bottom = 234;
+        faces.multiFace = true;
+    } else if (typeId === "minecraft:melon_block") {
+        faces.top = 235;
+        faces.bottom = 235;
+        faces.multiFace = true;
+    } else if (typeId === "minecraft:pumpkin" || typeId === "minecraft:carved_pumpkin") {
+        faces.top = 236;
+        faces.bottom = 236;
+        faces.multiFace = true;
+    } else if (typeId === "minecraft:mycelium") {
+        faces.top = 237;
+        faces.bottom = 8;
+        faces.multiFace = true;
+    } else if (typeId === "minecraft:podzol") {
+        faces.top = 238;
+        faces.bottom = 8;
+        faces.multiFace = true;
+    } else if (typeId === "minecraft:quartz_block") {
+        faces.top = 239;
+        faces.bottom = 239;
         faces.multiFace = true;
     } else if (DOOR_TEXTURE_PAIRS[typeId] || typeId === "minecraft:wooden_door") {
         let pair = DOOR_TEXTURE_PAIRS[typeId];
@@ -874,6 +941,7 @@ function refreshHologramEntities(player, preview) {
     const { origin, size, blocks, rotation, layerFilter } = preview;
     const dim = player.dimension;
     const createdEntities = [];
+    const pendingTextureProperties = [];
     const unknownTextureTypes = new Set();
     const texturePropertyErrors = [];
 
@@ -904,15 +972,7 @@ function refreshHologramEntities(player, preview) {
             if (textureIndex === UNKNOWN_TEXTURE_INDEX) {
                 unknownTextureTypes.add(b.typeId);
             }
-            try {
-                holo.setProperty("custom:tex_index", textureIndex);
-                holo.setProperty("custom:tex_side", faces.side);
-                holo.setProperty("custom:tex_top", faces.top);
-                holo.setProperty("custom:tex_bottom", faces.bottom);
-                holo.setProperty("custom:multi_face", faces.multiFace ? 1 : 0);
-            } catch (error) {
-                texturePropertyErrors.push(`${b.typeId}: ${error}`);
-            }
+            pendingTextureProperties.push({ entity: holo, typeId: b.typeId, textureIndex, faces });
 
             // 記錄這個全息實體對應投影裡的哪一個相對座標，
             // 讓玩家右鍵點擊這個實體時，能反查出該放哪個真實方塊 (Easy-Place)。
@@ -929,6 +989,27 @@ function refreshHologramEntities(player, preview) {
     }
 
     activeHologramEntities.set(pId, createdEntities);
+    system.run(() => {
+        for (const entry of pendingTextureProperties) {
+            try {
+                if (!entry.entity.isValid()) continue;
+                entry.entity.setProperty("custom:tex_index", entry.textureIndex);
+                entry.entity.setProperty("custom:tex_side", entry.faces.side);
+                entry.entity.setProperty("custom:tex_top", entry.faces.top);
+                entry.entity.setProperty("custom:tex_bottom", entry.faces.bottom);
+                entry.entity.setProperty("custom:multi_face", entry.faces.multiFace ? 1 : 0);
+            } catch (error) {
+                texturePropertyErrors.push(`${entry.typeId}: ${error}`);
+            }
+        }
+
+        if (texturePropertyErrors.length > 0) {
+            console.warn(`[BlockCounter] ${texturePropertyErrors.join(" | ")}`);
+            if (player.isValid()) {
+                player.sendMessage(`§c[材質診斷] ${texturePropertyErrors.length} 個投影無法設定材質屬性，請查看遊戲內容記錄。`);
+            }
+        }
+    });
 
     if (unknownTextureTypes.size > 0) {
         const unknownTypes = [...unknownTextureTypes];
@@ -936,11 +1017,6 @@ function refreshHologramEntities(player, preview) {
         const remainingCount = unknownTypes.length - 8;
         const remainingText = remainingCount > 0 ? `，另有 ${remainingCount} 種` : "";
         player.sendMessage(`§c[材質診斷] 找不到以下方塊的材質：${displayedTypes}${remainingText}`);
-    }
-
-    if (texturePropertyErrors.length > 0) {
-        console.warn(`[BlockCounter] ${texturePropertyErrors.join(" | ")}`);
-        player.sendMessage(`§c[材質診斷] ${texturePropertyErrors.length} 個投影無法設定材質屬性，請查看遊戲內容記錄。`);
     }
 }
 
@@ -1099,6 +1175,7 @@ function copyArea(player, p1, p2) {
     };
 
     playerClipboards.set(player.id, clipboardData);
+    playerPendingRotations.set(player.id, 0);
     player.sendMessage(`§a[系統] 已成功複製區域！共包含 ${blocks.length} 個方塊。`);
     player.sendMessage(`§e▶ 請拿「選區工具」對目標位置右鍵，即可確定貼上起點！`);
 }
@@ -1293,6 +1370,8 @@ function buildFromInventoryBottomUp(player, preview) {
 function setPlacementTarget(player, targetPos, rotation = 0) {
     const clip = playerClipboards.get(player.id);
     if (!clip) return;
+    rotation = (rotation + (playerPendingRotations.get(player.id) ?? 0)) % 4;
+    playerPendingRotations.set(player.id, 0);
 
     const previewData = {
         origin: targetPos,
@@ -1551,7 +1630,8 @@ function openMainMenu(player) {
     const p1Text = sel.p1 ? `${sel.p1.x}, ${sel.p1.y}, ${sel.p1.z}` : "未設定";
     const p2Text = sel.p2 ? `${sel.p2.x}, ${sel.p2.y}, ${sel.p2.z}` : "未設定";
     const clipText = clip ? `已複製 (${clip.blocks.length} 個方塊)` : "無";
-    const rotText = preview ? `${(preview.rotation % 4 + 4) % 4 * 90}°` : "0°";
+    const rotation = preview?.rotation ?? playerPendingRotations.get(player.id) ?? 0;
+    const rotText = `${((rotation % 4 + 4) % 4) * 90}°`;
 
     const form = new ActionFormData();
     form.title(`方塊統計控制台 v${BLOCKCOUNTER_VERSION}`);
@@ -1581,16 +1661,16 @@ function openMainMenu(player) {
             label: "📍 手動輸入放置起點座標",
             run: () => openPlacementCoordForm(player)
         });
+        actions.push({
+            label: `🔄 旋轉投影角度 (目前 ${rotText})`,
+            run: () => rotatePreviewInPlace(player, preview)
+        });
     }
 
     if (preview) {
         actions.push({
             label: "🥞 切換分層顯示 (Layer Mode)",
             run: () => openLayerSelectMenu(player, preview)
-        });
-        actions.push({
-            label: `🔄 旋轉投影角度 (目前 ${rotText})`,
-            run: () => rotatePreviewInPlace(player, preview)
         });
         actions.push({
             label: "✨ 一鍵貼上/建置結構",
@@ -1630,6 +1710,7 @@ function openMainMenu(player) {
             playerSelections.delete(player.id);
             playerClipboards.delete(player.id);
             playerPreviews.delete(player.id);
+            playerPendingRotations.delete(player.id);
             clearPlayerBorder(player.id);
             clearHologramEntities(player.id, player);
             player.sendMessage("§e[系統] 已清除所有座標與投影狀態，蹲下+右鍵可重新框選 P1/P2。");
@@ -1649,7 +1730,14 @@ function openMainMenu(player) {
  * 不需要玩家重新站位、重新面向，馬上刷新全息實體。
  */
 function rotatePreviewInPlace(player, preview) {
-    if (!preview) return;
+    if (!preview) {
+        const rotation = ((playerPendingRotations.get(player.id) ?? 0) + 1) % 4;
+        playerPendingRotations.set(player.id, rotation);
+        player.sendMessage(`§b[投影] 已設定待放置角度 ${rotation * 90}°`);
+        system.run(() => openMainMenu(player));
+        return;
+    }
+
     preview.rotation = ((preview.rotation ?? 0) + 1) % 4;
     playerPreviews.set(player.id, preview);
     refreshHologramEntities(player, preview);
@@ -1767,6 +1855,7 @@ function openFilterMenu(player) {
     form.title("設定過濾方塊");
     form.body(body);
     form.button("➕ 新增過濾方塊");
+    form.button("📚 從方塊清單直接選取");
     form.button("➖ 移除過濾方塊");
     form.button("🔄 重置為預設清單");
     form.button("返回主選單");
@@ -1775,13 +1864,95 @@ function openFilterMenu(player) {
         if (res.selection === 0) {
             openAddFilterForm(player);
         } else if (res.selection === 1) {
-            openRemoveFilterForm(player);
+            openBlockFilterPicker(player);
         } else if (res.selection === 2) {
+            openRemoveFilterForm(player);
+        } else if (res.selection === 3) {
             playerFilterLists.set(player.id, [...DEFAULT_FILTER_LIST]);
             player.sendMessage("§a[設定] 過濾清單已重置！");
             openFilterMenu(player);
-        } else if (res.selection === 3) {
+        } else if (res.selection === 4) {
             openMainMenu(player);
+        }
+    });
+}
+
+function openBlockFilterPicker(player, query = "", page = 0) {
+    let blockIds;
+    try {
+        blockIds = BlockTypes.getAll()
+            .map((blockType) => blockType.id)
+            .filter((id) => id !== "minecraft:air")
+            .sort((a, b) => a.localeCompare(b));
+    } catch (error) {
+        console.warn(`[BlockCounter] 無法取得可選方塊清單: ${error}`);
+        player.sendMessage("§c[錯誤] 無法載入方塊清單，請確認目前 Minecraft 版本支援新版 Script API。");
+        return;
+    }
+
+    const filterList = getPlayerFilterList(player.id);
+    const normalizedQuery = query.trim().toLowerCase();
+    const matchingIds = normalizedQuery
+        ? blockIds.filter((id) => id.toLowerCase().includes(normalizedQuery))
+        : blockIds;
+    const pageSize = 18;
+    const pageCount = Math.max(1, Math.ceil(matchingIds.length / pageSize));
+    const currentPage = Math.max(0, Math.min(page, pageCount - 1));
+    const pageIds = matchingIds.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
+
+    const form = new ActionFormData();
+    form.title("選取要排除的方塊");
+    form.body(
+        `搜尋：${normalizedQuery || "全部方塊"}\n` +
+        `結果 ${matchingIds.length} 個 | 第 ${currentPage + 1}/${pageCount} 頁\n` +
+        "點擊方塊即可加入過濾清單；已加入的方塊會標示 ✓。"
+    );
+
+    form.button("🔎 搜尋方塊");
+    const actions = [];
+    for (const id of pageIds) {
+        const alreadyFiltered = filterList.includes(id);
+        form.button(`${alreadyFiltered ? "✓ " : ""}${id.replace("minecraft:", "")}`);
+        actions.push({ type: "block", id });
+    }
+
+    if (currentPage > 0) {
+        form.button("⬅ 上一頁");
+        actions.push({ type: "page", page: currentPage - 1 });
+    }
+    if (currentPage + 1 < pageCount) {
+        form.button("下一頁 ➡");
+        actions.push({ type: "page", page: currentPage + 1 });
+    }
+    form.button("返回過濾設定");
+    actions.push({ type: "back" });
+
+    safeShowForm(player, form, (response) => {
+        if (response.selection === 0) {
+            const searchForm = new ModalFormData();
+            searchForm.title("搜尋方塊");
+            searchForm.textField("輸入方塊名稱或 ID", "例如：stone、glass");
+            safeShowForm(player, searchForm, (searchResponse) => {
+                const searchTerm = String(searchResponse.formValues[0] ?? "").trim();
+                openBlockFilterPicker(player, searchTerm, 0);
+            });
+            return;
+        }
+
+        const action = actions[response.selection - 1];
+        if (!action) return;
+        if (action.type === "block") {
+            if (!filterList.includes(action.id)) {
+                filterList.push(action.id);
+                player.sendMessage(`§a[設定] 已將 ${action.id} 加入過濾清單！`);
+            } else {
+                player.sendMessage(`§e[設定] ${action.id} 已在過濾清單中。`);
+            }
+            openBlockFilterPicker(player, query, currentPage);
+        } else if (action.type === "page") {
+            openBlockFilterPicker(player, query, action.page);
+        } else {
+            openFilterMenu(player);
         }
     });
 }

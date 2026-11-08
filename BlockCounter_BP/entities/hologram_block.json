@@ -11,7 +11,7 @@
           "type": "int",
           "range": [
             0,
-            224
+            239
           ],
           "default": 0,
           "client_sync": true
@@ -20,7 +20,7 @@
           "type": "int",
           "range": [
             0,
-            224
+            239
           ],
           "default": 0,
           "client_sync": true
@@ -29,7 +29,7 @@
           "type": "int",
           "range": [
             0,
-            224
+            239
           ],
           "default": 0,
           "client_sync": true
@@ -38,7 +38,7 @@
           "type": "int",
           "range": [
             0,
-            224
+            239
           ],
           "default": 0,
           "client_sync": true
