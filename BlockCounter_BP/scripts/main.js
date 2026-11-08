@@ -12,7 +12,7 @@ import {
     ActionFormData 
 } from "@minecraft/server-ui";
 
-world.sendMessage("§e[系統提示] BlockCounter v1.0.4 已成功載入！(若你沒看到這行版本號更新，代表遊戲還在用舊快取，請完全關閉遊戲重開)");
+world.sendMessage("§e[系統提示] BlockCounter v1.0.6 已成功載入！(若你沒看到這行版本號更新，代表遊戲還在用舊快取，請完全關閉遊戲重開)");
 
 // ==========================================
 // 1. 全域變數與數據儲存
@@ -178,7 +178,17 @@ const BLOCK_TEXTURE_TABLE = [
     [129, ["minecraft:green_terracotta"]],
     [130, ["minecraft:red_terracotta"]],
     [131, ["minecraft:black_terracotta"]],
-    [132, ["minecraft:terracotta"]]
+    [132, ["minecraft:terracotta"]],
+    [133, ["minecraft:tnt", "minecraft:tnt_side"]],
+    [134, ["minecraft:enchanting_table", "minecraft:enchanting_table_side"]],
+    [135, ["minecraft:torch", "minecraft:torch_on"]],
+    [136, ["minecraft:door_wood_lower"]],
+    [137, ["minecraft:door_spruce_lower"]],
+    [138, ["minecraft:door_birch_lower"]],
+    [139, ["minecraft:door_jungle_lower"]],
+    [140, ["minecraft:door_acacia_lower"]],
+    [141, ["minecraft:door_dark_oak_lower"]],
+    [142, ["minecraft:door_iron_lower"]]
 ];
 
 // 未知材質時使用 index 0 (RP 中的 hologram_unknown 棋盤格貼圖)
@@ -213,7 +223,7 @@ function getTextureIndexForBlock(typeId) {
 // ==========================================
 const BLOCK_FALLBACK_MAP = {
     // --- 木頭家具類 (不是靠後綴推算得出的特殊方塊) ---
-    "minecraft:bed": "minecraft:oak_planks",
+    "minecraft:bed": "minecraft:white_wool",
     "minecraft:flower_pot": "minecraft:oak_planks",
     "minecraft:cauldron": "minecraft:iron_block",
     "minecraft:lectern": "minecraft:oak_planks",
@@ -234,7 +244,7 @@ const BLOCK_FALLBACK_MAP = {
     "minecraft:spruce_stairs": "minecraft:spruce_planks",
     "minecraft:spruce_slab": "minecraft:spruce_planks",
     "minecraft:spruce_double_slab": "minecraft:spruce_planks",
-    "minecraft:spruce_door": "minecraft:spruce_planks",
+    "minecraft:spruce_door": "minecraft:door_spruce_lower",
     "minecraft:spruce_trapdoor": "minecraft:spruce_planks",
     "minecraft:spruce_fence": "minecraft:spruce_planks",
     "minecraft:spruce_fence_gate": "minecraft:spruce_planks",
@@ -242,8 +252,13 @@ const BLOCK_FALLBACK_MAP = {
     "minecraft:spruce_pressure_plate": "minecraft:spruce_planks",
     "minecraft:wooden_button": "minecraft:oak_planks",
     "minecraft:wooden_pressure_plate": "minecraft:oak_planks",
-    "minecraft:wooden_door": "minecraft:oak_planks",
-    "minecraft:iron_door": "minecraft:iron_block",
+    "minecraft:wooden_door": "minecraft:door_wood_lower",
+    "minecraft:oak_door": "minecraft:door_wood_lower",
+    "minecraft:birch_door": "minecraft:door_birch_lower",
+    "minecraft:jungle_door": "minecraft:door_jungle_lower",
+    "minecraft:acacia_door": "minecraft:door_acacia_lower",
+    "minecraft:dark_oak_door": "minecraft:door_dark_oak_lower",
+    "minecraft:iron_door": "minecraft:door_iron_lower",
     "minecraft:iron_trapdoor": "minecraft:iron_block",
     "minecraft:stone_button": "minecraft:stone",
     "minecraft:stone_pressure_plate": "minecraft:stone",

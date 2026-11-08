@@ -139,7 +139,17 @@
         "tex_129": "textures/blocks/hardened_clay_stained_green",
         "tex_130": "textures/blocks/hardened_clay_stained_red",
         "tex_131": "textures/blocks/hardened_clay_stained_black",
-        "tex_132": "textures/blocks/hardened_clay"
+        "tex_132": "textures/blocks/hardened_clay",
+        "tex_133": "textures/blocks/tnt_side",
+        "tex_134": "textures/blocks/enchanting_table_side",
+        "tex_135": "textures/blocks/torch_on",
+        "tex_136": "textures/blocks/door_wood_lower",
+        "tex_137": "textures/blocks/door_spruce_lower",
+        "tex_138": "textures/blocks/door_birch_lower",
+        "tex_139": "textures/blocks/door_jungle_lower",
+        "tex_140": "textures/blocks/door_acacia_lower",
+        "tex_141": "textures/blocks/door_dark_oak_lower",
+        "tex_142": "textures/blocks/door_iron_lower"
       },
       "geometry": {
         "default": "geometry.hologram_cube"
