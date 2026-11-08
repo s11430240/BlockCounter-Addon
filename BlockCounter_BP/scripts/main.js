@@ -12,7 +12,7 @@ import {
     ActionFormData 
 } from "@minecraft/server-ui";
 
-world.sendMessage("§e[系統提示] BlockCounter v1.0.8 已成功載入！(若你沒看到這行版本號更新，代表遊戲還在用舊快取，請完全關閉遊戲重開)");
+world.sendMessage("§e[系統提示] BlockCounter v1.0.9 已成功載入！(若你沒看到這行版本號更新，代表遊戲還在用舊快取，請完全關閉遊戲重開)");
 
 // ==========================================
 // 1. 全域變數與數據儲存
@@ -188,10 +188,7 @@ const BLOCK_TEXTURE_TABLE = [
     [139, ["minecraft:door_jungle_lower"]],
     [140, ["minecraft:door_acacia_lower"]],
     [141, ["minecraft:door_dark_oak_lower"]],
-    [142, ["minecraft:door_iron_lower"]],
-    [143, ["minecraft:barrel"]],
-    [144, ["minecraft:chest"]],
-    [145, ["minecraft:trapped_chest"]]
+    [142, ["minecraft:door_iron_lower"]]
 ];
 
 // 未知材質時使用 index 0 (RP 中的 hologram_unknown 棋盤格貼圖)
@@ -213,19 +210,52 @@ const BED_COLOR_NAMES = [
     "light_gray", "cyan", "purple", "blue", "brown", "green", "red", "black"
 ];
 
+const LEGACY_WOOD_TYPES = ["oak", "spruce", "birch", "jungle", "acacia", "dark_oak"];
+
+function getLegacyWoodType(permutation) {
+    if (!permutation) return null;
+
+    const states = permutation.getAllStates();
+    const woodType = states.wood_type ?? states["minecraft:wood_type"];
+    if (typeof woodType === "number") {
+        return LEGACY_WOOD_TYPES[woodType] ?? null;
+    }
+    if (typeof woodType !== "string") return null;
+
+    const normalized = woodType.toLowerCase();
+    if (normalized === "big_oak") return "dark_oak";
+    return LEGACY_WOOD_TYPES.includes(normalized) ? normalized : null;
+}
+
 function getTextureIndexForBlock(typeId, permutation) {
     if (!typeId) return UNKNOWN_TEXTURE_INDEX;
 
-    if (typeId === "minecraft:bed" && permutation) {
+    if (permutation) {
         const states = permutation.getAllStates();
-        const color = states.color ?? states["minecraft:color"];
-        const colorName = typeof color === "number"
-            ? BED_COLOR_NAMES[color]
-            : typeof color === "string"
-                ? color.toLowerCase()
-                : null;
-        if (colorName && BLOCK_TEXTURE_INDEX_MAP.has(`minecraft:${colorName}_wool`)) {
-            return BLOCK_TEXTURE_INDEX_MAP.get(`minecraft:${colorName}_wool`);
+        const woodType = getLegacyWoodType(permutation);
+
+        if (typeId === "minecraft:planks" && woodType) {
+            const plankId = `minecraft:${woodType}_planks`;
+            if (BLOCK_TEXTURE_INDEX_MAP.has(plankId)) return BLOCK_TEXTURE_INDEX_MAP.get(plankId);
+        }
+
+        if (typeId === "minecraft:wooden_door" && woodType) {
+            const doorId = woodType === "oak"
+                ? "minecraft:door_wood_lower"
+                : `minecraft:door_${woodType}_lower`;
+            if (BLOCK_TEXTURE_INDEX_MAP.has(doorId)) return BLOCK_TEXTURE_INDEX_MAP.get(doorId);
+        }
+
+        if (typeId === "minecraft:bed") {
+            const color = states.color ?? states["minecraft:color"];
+            const colorName = typeof color === "number"
+                ? BED_COLOR_NAMES[color]
+                : typeof color === "string"
+                    ? color.toLowerCase()
+                    : null;
+            if (colorName && BLOCK_TEXTURE_INDEX_MAP.has(`minecraft:${colorName}_wool`)) {
+                return BLOCK_TEXTURE_INDEX_MAP.get(`minecraft:${colorName}_wool`);
+            }
         }
     }
 

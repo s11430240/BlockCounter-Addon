@@ -149,10 +149,7 @@
         "tex_139": "textures/blocks/door_jungle_lower",
         "tex_140": "textures/blocks/door_acacia_lower",
         "tex_141": "textures/blocks/door_dark_oak_lower",
-        "tex_142": "textures/blocks/door_iron_lower",
-        "tex_143": "textures/blocks/barrel_side",
-        "tex_144": "textures/blocks/chest_front",
-        "tex_145": "textures/blocks/trapped_chest_front"
+        "tex_142": "textures/blocks/door_iron_lower"
       },
       "geometry": {
         "default": "geometry.hologram_cube"
