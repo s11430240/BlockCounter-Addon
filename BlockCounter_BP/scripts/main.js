@@ -12,7 +12,7 @@ import {
     ActionFormData 
 } from "@minecraft/server-ui";
 
-world.sendMessage("§e[系統提示] BlockCounter v1.0.7 已成功載入！(若你沒看到這行版本號更新，代表遊戲還在用舊快取，請完全關閉遊戲重開)");
+world.sendMessage("§e[系統提示] BlockCounter v1.0.8 已成功載入！(若你沒看到這行版本號更新，代表遊戲還在用舊快取，請完全關閉遊戲重開)");
 
 // ==========================================
 // 1. 全域變數與數據儲存
@@ -188,7 +188,10 @@ const BLOCK_TEXTURE_TABLE = [
     [139, ["minecraft:door_jungle_lower"]],
     [140, ["minecraft:door_acacia_lower"]],
     [141, ["minecraft:door_dark_oak_lower"]],
-    [142, ["minecraft:door_iron_lower"]]
+    [142, ["minecraft:door_iron_lower"]],
+    [143, ["minecraft:barrel"]],
+    [144, ["minecraft:chest"]],
+    [145, ["minecraft:trapped_chest"]]
 ];
 
 // 未知材質時使用 index 0 (RP 中的 hologram_unknown 棋盤格貼圖)
@@ -243,9 +246,6 @@ function getTextureIndexForBlock(typeId, permutation) {
 const BLOCK_FALLBACK_MAP = {
     // --- 木頭家具類 (不是靠後綴推算得出的特殊方塊) ---
     "minecraft:bed": "minecraft:white_wool",
-    "minecraft:barrel": "minecraft:oak_planks",
-    "minecraft:chest": "minecraft:oak_planks",
-    "minecraft:trapped_chest": "minecraft:oak_planks",
     "minecraft:flower_pot": "minecraft:oak_planks",
     "minecraft:cauldron": "minecraft:iron_block",
     "minecraft:lectern": "minecraft:oak_planks",
