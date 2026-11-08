@@ -11,7 +11,43 @@
           "type": "int",
           "range": [
             0,
-            142
+            224
+          ],
+          "default": 0,
+          "client_sync": true
+        },
+        "custom:tex_side": {
+          "type": "int",
+          "range": [
+            0,
+            224
+          ],
+          "default": 0,
+          "client_sync": true
+        },
+        "custom:tex_top": {
+          "type": "int",
+          "range": [
+            0,
+            224
+          ],
+          "default": 0,
+          "client_sync": true
+        },
+        "custom:tex_bottom": {
+          "type": "int",
+          "range": [
+            0,
+            224
+          ],
+          "default": 0,
+          "client_sync": true
+        },
+        "custom:multi_face": {
+          "type": "int",
+          "range": [
+            0,
+            1
           ],
           "default": 0,
           "client_sync": true

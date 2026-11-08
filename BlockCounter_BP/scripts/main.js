@@ -12,7 +12,7 @@ import {
     ActionFormData 
 } from "@minecraft/server-ui";
 
-world.sendMessage("§e[系統提示] BlockCounter v1.0.9 已成功載入！(若你沒看到這行版本號更新，代表遊戲還在用舊快取，請完全關閉遊戲重開)");
+world.sendMessage("§e[系統提示] BlockCounter v1.1.0 已成功載入！(若你沒看到這行版本號更新，代表遊戲還在用舊快取，請完全關閉遊戲重開)");
 
 // ==========================================
 // 1. 全域變數與數據儲存
@@ -181,14 +181,96 @@ const BLOCK_TEXTURE_TABLE = [
     [132, ["minecraft:terracotta"]],
     [133, ["minecraft:tnt", "minecraft:tnt_side"]],
     [134, ["minecraft:enchanting_table", "minecraft:enchanting_table_side"]],
-    [135, ["minecraft:torch", "minecraft:torch_on"]],
+    [135, ["minecraft:torch", "minecraft:wall_torch", "minecraft:torch_on"]],
     [136, ["minecraft:door_wood_lower"]],
     [137, ["minecraft:door_spruce_lower"]],
     [138, ["minecraft:door_birch_lower"]],
     [139, ["minecraft:door_jungle_lower"]],
     [140, ["minecraft:door_acacia_lower"]],
     [141, ["minecraft:door_dark_oak_lower"]],
-    [142, ["minecraft:door_iron_lower"]]
+    [142, ["minecraft:door_iron_lower"]],
+    [143, ["minecraft:tnt_top"]],
+    [144, ["minecraft:tnt_bottom"]],
+    [145, ["minecraft:enchanting_table_top"]],
+    [146, ["minecraft:enchanting_table_bottom"]],
+    [147, ["minecraft:door_wood_upper"]],
+    [148, ["minecraft:door_spruce_upper"]],
+    [149, ["minecraft:door_birch_upper"]],
+    [150, ["minecraft:door_jungle_upper"]],
+    [151, ["minecraft:door_acacia_upper"]],
+    [152, ["minecraft:door_dark_oak_upper"]],
+    [153, ["minecraft:door_iron_upper"]],
+    [154, ["minecraft:trapdoor", "minecraft:oak_trapdoor"]],
+    [155, ["minecraft:acacia_trapdoor"]],
+    [156, ["minecraft:birch_trapdoor"]],
+    [157, ["minecraft:dark_oak_trapdoor"]],
+    [158, ["minecraft:jungle_trapdoor"]],
+    [159, ["minecraft:spruce_trapdoor"]],
+    [160, ["minecraft:iron_trapdoor"]],
+    [161, ["minecraft:crimson_trapdoor"]],
+    [162, ["minecraft:warped_trapdoor"]],
+    [163, ["minecraft:mangrove_trapdoor"]],
+    [164, ["minecraft:bamboo_trapdoor"]],
+    [165, ["minecraft:cherry_trapdoor"]],
+    [166, ["minecraft:copper_trapdoor", "minecraft:waxed_copper_trapdoor"]],
+    [167, ["minecraft:exposed_copper_trapdoor", "minecraft:waxed_exposed_copper_trapdoor"]],
+    [168, ["minecraft:weathered_copper_trapdoor", "minecraft:waxed_weathered_copper_trapdoor"]],
+    [169, ["minecraft:oxidized_copper_trapdoor", "minecraft:waxed_oxidized_copper_trapdoor"]],
+    [170, ["minecraft:pale_oak_trapdoor"]],
+    [171, ["minecraft:poplar_trapdoor"]],
+    [172, ["minecraft:soul_torch", "minecraft:soul_wall_torch"]],
+    [173, ["minecraft:copper_torch"]],
+    [174, ["minecraft:redstone_torch"]],
+    [175, ["minecraft:bamboo_planks"]],
+    [176, ["minecraft:mangrove_planks"]],
+    [177, ["minecraft:cherry_planks"]],
+    [178, ["minecraft:crimson_planks"]],
+    [179, ["minecraft:warped_planks"]],
+    [180, ["minecraft:pale_oak_planks"]],
+    [181, ["minecraft:poplar_planks"]],
+    [182, ["minecraft:polished_blackstone"]],
+    [183, ["minecraft:moss_block", "minecraft:moss_carpet"]],
+    [184, ["minecraft:pale_moss_block", "minecraft:pale_moss_carpet"]],
+    [185, ["minecraft:pale_moss_carpet_side_base"]],
+    [186, ["minecraft:bamboo_door_bottom"]],
+    [187, ["minecraft:bamboo_door_top"]],
+    [188, ["minecraft:cherry_door_bottom"]],
+    [189, ["minecraft:cherry_door_top"]],
+    [190, ["minecraft:mangrove_door_bottom"]],
+    [191, ["minecraft:mangrove_door_top"]],
+    [192, ["minecraft:pale_oak_door_bottom"]],
+    [193, ["minecraft:pale_oak_door_top"]],
+    [194, ["minecraft:poplar_door_bottom"]],
+    [195, ["minecraft:poplar_door_top"]],
+    [196, ["minecraft:crimson_door_lower"]],
+    [197, ["minecraft:crimson_door_top"]],
+    [198, ["minecraft:warped_door_lower"]],
+    [199, ["minecraft:warped_door_top"]],
+    [200, ["minecraft:redstone_torch_off", "minecraft:unlit_redstone_torch"]],
+    [201, ["minecraft:copper_door_bottom"]],
+    [202, ["minecraft:copper_door_top"]],
+    [203, ["minecraft:exposed_copper_door_bottom"]],
+    [204, ["minecraft:exposed_copper_door_top"]],
+    [205, ["minecraft:weathered_copper_door_bottom"]],
+    [206, ["minecraft:weathered_copper_door_top"]],
+    [207, ["minecraft:oxidized_copper_door_bottom"]],
+    [208, ["minecraft:oxidized_copper_door_top"]],
+    [209, ["minecraft:bed_white"]],
+    [210, ["minecraft:bed_orange"]],
+    [211, ["minecraft:bed_magenta"]],
+    [212, ["minecraft:bed_light_blue"]],
+    [213, ["minecraft:bed_yellow"]],
+    [214, ["minecraft:bed_lime"]],
+    [215, ["minecraft:bed_pink"]],
+    [216, ["minecraft:bed_gray"]],
+    [217, ["minecraft:bed_silver"]],
+    [218, ["minecraft:bed_cyan"]],
+    [219, ["minecraft:bed_purple"]],
+    [220, ["minecraft:bed_blue"]],
+    [221, ["minecraft:bed_brown"]],
+    [222, ["minecraft:bed_green"]],
+    [223, ["minecraft:bed_red"]],
+    [224, ["minecraft:bed_black"]]
 ];
 
 // 未知材質時使用 index 0 (RP 中的 hologram_unknown 棋盤格貼圖)
@@ -205,12 +287,37 @@ for (const [index, ids] of BLOCK_TEXTURE_TABLE) {
  * 依方塊 typeId 找出對應的材質索引 (對應 RP 貼圖陣列)。
  * 找不到對應材質時，回傳 UNKNOWN_TEXTURE_INDEX，而不是靜默顯示成泥土。
  */
-const BED_COLOR_NAMES = [
+const LEGACY_WOOD_TYPES = ["oak", "spruce", "birch", "jungle", "acacia", "dark_oak"];
+const CARPET_COLOR_NAMES = [
     "white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray",
-    "light_gray", "cyan", "purple", "blue", "brown", "green", "red", "black"
+    "silver", "cyan", "purple", "blue", "brown", "green", "red", "black"
 ];
 
-const LEGACY_WOOD_TYPES = ["oak", "spruce", "birch", "jungle", "acacia", "dark_oak"];
+const DOOR_TEXTURE_PAIRS = {
+    "minecraft:wooden_door": [136, 147],
+    "minecraft:oak_door": [136, 147],
+    "minecraft:spruce_door": [137, 148],
+    "minecraft:birch_door": [138, 149],
+    "minecraft:jungle_door": [139, 150],
+    "minecraft:acacia_door": [140, 151],
+    "minecraft:dark_oak_door": [141, 152],
+    "minecraft:iron_door": [142, 153],
+    "minecraft:bamboo_door": [186, 187],
+    "minecraft:cherry_door": [188, 189],
+    "minecraft:mangrove_door": [190, 191],
+    "minecraft:pale_oak_door": [192, 193],
+    "minecraft:poplar_door": [194, 195],
+    "minecraft:crimson_door": [196, 197],
+    "minecraft:warped_door": [198, 199],
+    "minecraft:copper_door": [201, 202],
+    "minecraft:waxed_copper_door": [201, 202],
+    "minecraft:exposed_copper_door": [203, 204],
+    "minecraft:waxed_exposed_copper_door": [203, 204],
+    "minecraft:weathered_copper_door": [205, 206],
+    "minecraft:waxed_weathered_copper_door": [205, 206],
+    "minecraft:oxidized_copper_door": [207, 208],
+    "minecraft:waxed_oxidized_copper_door": [207, 208]
+};
 
 function getLegacyWoodType(permutation) {
     if (!permutation) return null;
@@ -225,6 +332,19 @@ function getLegacyWoodType(permutation) {
     const normalized = woodType.toLowerCase();
     if (normalized === "big_oak") return "dark_oak";
     return LEGACY_WOOD_TYPES.includes(normalized) ? normalized : null;
+}
+
+function getColorNameFromPermutation(permutation) {
+    if (!permutation) return null;
+
+    const states = permutation.getAllStates();
+    const color = states.color ?? states["minecraft:color"];
+    if (typeof color === "number") return CARPET_COLOR_NAMES[color] ?? null;
+    if (typeof color !== "string") return null;
+
+    const normalized = color.toLowerCase();
+    if (normalized === "light_gray") return "silver";
+    return CARPET_COLOR_NAMES.includes(normalized) ? normalized : null;
 }
 
 function getTextureIndexForBlock(typeId, permutation) {
@@ -246,15 +366,22 @@ function getTextureIndexForBlock(typeId, permutation) {
             if (BLOCK_TEXTURE_INDEX_MAP.has(doorId)) return BLOCK_TEXTURE_INDEX_MAP.get(doorId);
         }
 
+        if (typeId === "minecraft:wooden_button" && woodType) {
+            const plankId = `minecraft:${woodType}_planks`;
+            if (BLOCK_TEXTURE_INDEX_MAP.has(plankId)) return BLOCK_TEXTURE_INDEX_MAP.get(plankId);
+        }
+
         if (typeId === "minecraft:bed") {
-            const color = states.color ?? states["minecraft:color"];
-            const colorName = typeof color === "number"
-                ? BED_COLOR_NAMES[color]
-                : typeof color === "string"
-                    ? color.toLowerCase()
-                    : null;
-            if (colorName && BLOCK_TEXTURE_INDEX_MAP.has(`minecraft:${colorName}_wool`)) {
-                return BLOCK_TEXTURE_INDEX_MAP.get(`minecraft:${colorName}_wool`);
+            const colorName = getColorNameFromPermutation(permutation);
+            const colorIndex = CARPET_COLOR_NAMES.indexOf(colorName);
+            if (colorIndex >= 0) return 209 + colorIndex;
+        }
+
+        if (typeId === "minecraft:carpet") {
+            const colorName = getColorNameFromPermutation(permutation);
+            const woolColor = colorName === "silver" ? "light_gray" : colorName;
+            if (woolColor && BLOCK_TEXTURE_INDEX_MAP.has(`minecraft:${woolColor}_wool`)) {
+                return BLOCK_TEXTURE_INDEX_MAP.get(`minecraft:${woolColor}_wool`);
             }
         }
     }
@@ -265,6 +392,56 @@ function getTextureIndexForBlock(typeId, permutation) {
     if (aliasId && BLOCK_TEXTURE_INDEX_MAP.has(aliasId)) return BLOCK_TEXTURE_INDEX_MAP.get(aliasId);
 
     return UNKNOWN_TEXTURE_INDEX;
+}
+
+function getTextureFacesForBlock(typeId, permutation) {
+    const baseIndex = getTextureIndexForBlock(typeId, permutation);
+    const faces = { side: baseIndex, top: baseIndex, bottom: baseIndex, multiFace: false };
+    const states = permutation ? permutation.getAllStates() : {};
+
+    if (typeId === "minecraft:tnt") {
+        faces.top = 143;
+        faces.bottom = 144;
+        faces.side = 133;
+        faces.multiFace = true;
+    } else if (typeId === "minecraft:enchanting_table") {
+        faces.top = 145;
+        faces.bottom = 146;
+        faces.side = 134;
+        faces.multiFace = true;
+    } else if (typeId === "minecraft:bookshelf") {
+        faces.top = 12;
+        faces.bottom = 12;
+        faces.side = 58;
+        faces.multiFace = true;
+    } else if (typeId === "minecraft:bed") {
+        faces.top = baseIndex;
+        faces.bottom = 12;
+        faces.side = baseIndex;
+        faces.multiFace = true;
+    } else if (typeId === "minecraft:pale_moss_carpet") {
+        faces.top = 184;
+        faces.bottom = 184;
+        faces.side = 185;
+        faces.multiFace = true;
+    } else if (DOOR_TEXTURE_PAIRS[typeId] || typeId === "minecraft:wooden_door") {
+        let pair = DOOR_TEXTURE_PAIRS[typeId];
+        const woodType = getLegacyWoodType(permutation);
+        if (!pair && woodType) {
+            const doorId = woodType === "oak" ? "minecraft:oak_door" : `minecraft:${woodType}_door`;
+            pair = DOOR_TEXTURE_PAIRS[doorId];
+        }
+        if (pair) {
+            const upperBit = states.upper_block_bit ?? states["minecraft:upper_block_bit"];
+            const textureIndex = upperBit === true || upperBit === 1 ? pair[1] : pair[0];
+            faces.top = textureIndex;
+            faces.bottom = textureIndex;
+            faces.side = textureIndex;
+            faces.multiFace = true;
+        }
+    }
+
+    return faces;
 }
 
 // ==========================================
@@ -708,9 +885,13 @@ function refreshHologramEntities(player, preview) {
             // 依實際方塊 typeId 設定材質索引 entity property，
             // render controller 會依此索引切換成對應的貼圖陣列成員，
             // 使全息投影的材質與被複製/選取的方塊材質一致。
-            const texIndex = getTextureIndexForBlock(b.typeId, b.permutation);
+            const faces = getTextureFacesForBlock(b.typeId, b.permutation);
             try {
-                holo.setProperty("custom:tex_index", texIndex);
+                holo.setProperty("custom:tex_index", getTextureIndexForBlock(b.typeId, b.permutation));
+                holo.setProperty("custom:tex_side", faces.side);
+                holo.setProperty("custom:tex_top", faces.top);
+                holo.setProperty("custom:tex_bottom", faces.bottom);
+                holo.setProperty("custom:multi_face", faces.multiFace ? 1 : 0);
             } catch (e) {}
 
             // 記錄這個全息實體對應投影裡的哪一個相對座標，

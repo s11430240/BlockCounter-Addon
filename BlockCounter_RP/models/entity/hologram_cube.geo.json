@@ -12,7 +12,7 @@
       },
       "bones": [
         {
-          "name": "root",
+          "name": "full_block",
           "pivot": [0, 0, 0],
           "cubes": [
             {
@@ -26,6 +26,72 @@
                 "up":    {"uv": [0, 0], "uv_size": [16, 16]},
                 "down":  {"uv": [0, 0], "uv_size": [16, 16]}
               }
+            }
+          ]
+        },
+        {
+          "name": "face_north",
+          "pivot": [0, 0, 0],
+          "cubes": [
+            {
+              "origin": [-8, 0, -8],
+              "size": [16, 16, 0.01],
+              "uv": { "north": {"uv": [0, 0], "uv_size": [16, 16]} }
+            }
+          ]
+        },
+        {
+          "name": "face_south",
+          "pivot": [0, 0, 0],
+          "cubes": [
+            {
+              "origin": [-8, 0, 7.99],
+              "size": [16, 16, 0.01],
+              "uv": { "south": {"uv": [0, 0], "uv_size": [16, 16]} }
+            }
+          ]
+        },
+        {
+          "name": "face_east",
+          "pivot": [0, 0, 0],
+          "cubes": [
+            {
+              "origin": [7.99, 0, -8],
+              "size": [0.01, 16, 16],
+              "uv": { "east": {"uv": [0, 0], "uv_size": [16, 16]} }
+            }
+          ]
+        },
+        {
+          "name": "face_west",
+          "pivot": [0, 0, 0],
+          "cubes": [
+            {
+              "origin": [-8, 0, -8],
+              "size": [0.01, 16, 16],
+              "uv": { "west": {"uv": [0, 0], "uv_size": [16, 16]} }
+            }
+          ]
+        },
+        {
+          "name": "face_up",
+          "pivot": [0, 0, 0],
+          "cubes": [
+            {
+              "origin": [-8, 15.99, -8],
+              "size": [16, 0.01, 16],
+              "uv": { "up": {"uv": [0, 0], "uv_size": [16, 16]} }
+            }
+          ]
+        },
+        {
+          "name": "face_down",
+          "pivot": [0, 0, 0],
+          "cubes": [
+            {
+              "origin": [-8, 0, -8],
+              "size": [16, 0.01, 16],
+              "uv": { "down": {"uv": [0, 0], "uv_size": [16, 16]} }
             }
           ]
         }
