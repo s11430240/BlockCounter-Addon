@@ -205,8 +205,27 @@ for (const [index, ids] of BLOCK_TEXTURE_TABLE) {
  * 依方塊 typeId 找出對應的材質索引 (對應 RP 貼圖陣列)。
  * 找不到對應材質時，回傳 UNKNOWN_TEXTURE_INDEX，而不是靜默顯示成泥土。
  */
-function getTextureIndexForBlock(typeId) {
+const BED_COLOR_NAMES = [
+    "white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray",
+    "light_gray", "cyan", "purple", "blue", "brown", "green", "red", "black"
+];
+
+function getTextureIndexForBlock(typeId, permutation) {
     if (!typeId) return UNKNOWN_TEXTURE_INDEX;
+
+    if (typeId === "minecraft:bed" && permutation) {
+        const states = permutation.getAllStates();
+        const color = states.color ?? states["minecraft:color"];
+        const colorName = typeof color === "number"
+            ? BED_COLOR_NAMES[color]
+            : typeof color === "string"
+                ? color.toLowerCase()
+                : null;
+        if (colorName && BLOCK_TEXTURE_INDEX_MAP.has(`minecraft:${colorName}_wool`)) {
+            return BLOCK_TEXTURE_INDEX_MAP.get(`minecraft:${colorName}_wool`);
+        }
+    }
+
     if (BLOCK_TEXTURE_INDEX_MAP.has(typeId)) return BLOCK_TEXTURE_INDEX_MAP.get(typeId);
 
     const aliasId = resolveNonFullBlockAlias(typeId);
@@ -373,19 +392,6 @@ function resolveNonFullBlockAlias(typeId) {
 
     NON_FULL_ALIAS_CACHE.set(typeId, result);
     return result;
-}
-
-/**
- * 取得全息實體使用的完整方塊材質 ID；不修改投影資料中的原始方塊 ID。
- */
-function getBlockGeometryWithFallback(blockId) {
-    if (!blockId) return "minecraft:stone";
-    if (BLOCK_TEXTURE_INDEX_MAP.has(blockId)) return blockId;
-
-    const fallbackId = resolveNonFullBlockAlias(blockId);
-    if (fallbackId && BLOCK_TEXTURE_INDEX_MAP.has(fallbackId)) return fallbackId;
-
-    return "minecraft:stone";
 }
 
 // ==========================================
@@ -672,8 +678,7 @@ function refreshHologramEntities(player, preview) {
             // 依實際方塊 typeId 設定材質索引 entity property，
             // render controller 會依此索引切換成對應的貼圖陣列成員，
             // 使全息投影的材質與被複製/選取的方塊材質一致。
-            const geometryId = getBlockGeometryWithFallback(b.typeId);
-            const texIndex = getTextureIndexForBlock(geometryId);
+            const texIndex = getTextureIndexForBlock(b.typeId, b.permutation);
             try {
                 holo.setProperty("custom:tex_index", texIndex);
             } catch (e) {}
@@ -1390,13 +1395,7 @@ function rotatePreviewInPlace(player, preview) {
     playerPreviews.set(player.id, preview);
     refreshHologramEntities(player, preview);
     player.sendMessage(`§b[投影] 已旋轉至 ${preview.rotation * 90}°`);
-    // 注意：這裡故意「不」自動重新打開選單。
-    // ActionFormData 選單是全螢幕的，選完按鈕後會先自動關閉；
-    // 如果馬上呼叫 openMainMenu() 重開，玩家會完全看不到世界中
-    // 全息投影其實已經即時旋轉了 (選單瞬間又蓋滿畫面)，
-    // 感覺就像「按了沒反應」。拿掉這行，讓玩家能實際看到
-    // 全息投影在原地旋轉，跟 Litematica 一樣；要做其他操作
-    // 再用工具重新開一次選單即可。
+    system.run(() => openMainMenu(player));
 }
 
 /**
